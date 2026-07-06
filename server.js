@@ -388,11 +388,11 @@ app.post('/api/chat/send', async (req, res) => {
         systemParts.push(`\n## Important Facts You Remember\n${memory.facts.map(f => `- ${f}`).join('\n')}`);
     }
     if (memory.importantEvents && memory.importantEvents.length > 0) {
-        const recentEvents = memory.importantEvents.slice(-20);
+        const recentEvents = memory.importantEvents.slice(-10);
         systemParts.push(`\n## Important Past Events\n${recentEvents.map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
     }
     if (memory.summaries && memory.summaries.length > 0) {
-        const recentSummaries = memory.summaries.slice(-5);
+        const recentSummaries = memory.summaries.slice(-3);
         systemParts.push(`\n## Previous Conversation Summaries\n${recentSummaries.map(s => `- ${s}`).join('\n')}`);
     }
     if (memory.userPreferences && Object.keys(memory.userPreferences).length > 0) {
@@ -438,7 +438,7 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
                 model: modelName,
                 messages: messages,
                 max_tokens: 1024,
-                temperature: 0.90,
+                temperature: 0.9,
                 frequency_penalty: 0.1,
                 presence_penalty: 0.1,
                 top_p: 0.95,
@@ -542,8 +542,8 @@ app.post('/api/chat/regenerate', async (req, res) => {
     if (char.systemPrompt) systemParts.push(`\n## Additional Instructions\n${char.systemPrompt}`);
     if (char.exampleDialogue) systemParts.push(`\n## Example Dialogue Style\n${char.exampleDialogue}`);
     if (memory.facts && memory.facts.length > 0) systemParts.push(`\n## Important Facts You Remember\n${memory.facts.map(f => `- ${f}`).join('\n')}`);
-    if (memory.importantEvents && memory.importantEvents.length > 0) systemParts.push(`\n## Important Past Events\n${memory.importantEvents.slice(-20).map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
-    if (memory.summaries && memory.summaries.length > 0) systemParts.push(`\n## Previous Conversation Summaries\n${memory.summaries.slice(-5).map(s => `- ${s}`).join('\n')}`);
+    if (memory.importantEvents && memory.importantEvents.length > 0) systemParts.push(`\n## Important Past Events\n${memory.importantEvents.slice(-10).map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
+    if (memory.summaries && memory.summaries.length > 0) systemParts.push(`\n## Previous Conversation Summaries\n${memory.summaries.slice(-3).map(s => `- ${s}`).join('\n')}`);
     if (memory.userPreferences && Object.keys(memory.userPreferences).length > 0) {
         systemParts.push(`\n## What You Know About the User\n${Object.entries(memory.userPreferences).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`);
     }
@@ -565,7 +565,7 @@ app.post('/api/chat/regenerate', async (req, res) => {
                 model: modelName,
                 messages: messages,
                 max_tokens: 1024,
-                temperature: 0.90,
+                temperature: 0.9,
                 frequency_penalty: 0.1,
                 presence_penalty: 0.1,
                 top_p: 0.95,
@@ -623,14 +623,14 @@ app.put('/api/chat/:chatId/message', (req, res) => {
     const { messageIndex, content } = req.body;
     const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
     const chat = readJSON(fp);
-    
+
     if (!chat || !chat.messages || !chat.messages[messageIndex]) {
         return res.status(404).json({ error: 'Chat or message not found' });
     }
 
     // Update the specific message
     chat.messages[messageIndex].content = content;
-    
+
     // Also clear alternates for this message since it was manually edited
     if (chat.messages[messageIndex].alternates) {
         delete chat.messages[messageIndex].alternates;
@@ -639,7 +639,7 @@ app.put('/api/chat/:chatId/message', (req, res) => {
 
     chat.updatedAt = new Date().toISOString();
     writeJSON(fp, chat);
-    
+
     res.json({ ok: true });
 });
 
@@ -695,11 +695,11 @@ function autoExtractMemory(characterId, userMsg, assistantMsg, memory) {
     }
 
     // Keep memory size manageable
-    if (memory.facts && memory.facts.length > 100) {
-        memory.facts = memory.facts.slice(-100);
+    if (memory.facts && memory.facts.length > 50) {
+        memory.facts = memory.facts.slice(-50);
     }
-    if (memory.importantEvents && memory.importantEvents.length > 50) {
-        memory.importantEvents = memory.importantEvents.slice(-50);
+    if (memory.importantEvents && memory.importantEvents.length > 20) {
+        memory.importantEvents = memory.importantEvents.slice(-20);
     }
 
     if (changed) {

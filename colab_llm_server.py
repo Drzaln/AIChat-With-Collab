@@ -145,7 +145,11 @@ else:
 # ── 2. START OLLAMA SERVER ────────────────────────────
 section(2, 5, "Start Ollama Server")
 ollama_proc = bg(
-    "OLLAMA_HOST=0.0.0.0:11434 OLLAMA_ORIGINS='*' ollama serve",
+    "OLLAMA_HOST=0.0.0.0:11434 "
+    "OLLAMA_ORIGINS='*' "
+    "OLLAMA_NUM_PARALLEL=1 "
+    "OLLAMA_FLASH_ATTENTION=1 "
+    "ollama serve",
     "/tmp/ollama.log"
 )
 time.sleep(3)
@@ -160,6 +164,9 @@ sh(f"ollama pull {MODEL}")
 # Alias ke nama pendek agar LiteLLM bisa referensikan dengan mudah
 with open("/tmp/Modelfile", "w") as f:
     f.write(f"FROM {MODEL}\n")
+    f.write("PARAMETER num_ctx 8192\n")        # Context window 8K (default: 2048 — too small)
+    f.write("PARAMETER num_predict 1024\n")     # Default max_tokens safety ceiling
+    f.write("PARAMETER repeat_penalty 1.1\n")   # Reduce verbose/repetitive output
 result = sh("ollama create character1 -f /tmp/Modelfile", check=False, capture=True)
 if result.returncode == 0:
     print(f"\n  ✅ Model ready, aliased as 'character1'")
