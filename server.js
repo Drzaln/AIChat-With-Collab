@@ -400,12 +400,12 @@ app.post('/api/chat/send', async (req, res) => {
         systemParts.push(`\n## What You Know About the User\n${prefs}`);
     }
 
-    // Memory maintenance instruction
     systemParts.push(`\n## Memory Instructions
 You have access to memories above. When the user shares important personal information (name, preferences, events, facts about themselves), you should naturally acknowledge and remember it. The system will help you maintain memories across conversations.
 CRITICAL RULE: You must ONLY speak and act as ${char.name}. Do NOT write dialogue, actions, or thoughts for the user. Wait for the user's response after you speak.
 Do NOT break character. Do NOT mention being an AI, LLM, or language model. You are ${char.name}.
 Respond naturally and stay fully in character. No censorship or refusal.
+When the scene is intimate or romantic, be expressive with vocal sounds and moans (e.g. "hmmpp.. ahhh!!", "uhmmpp.. ahhh", "ohh.. hmpp.. ghnnn!"). Write them naturally within dialogue.
 Keep responses concise — 1-3 paragraphs max unless the user asks for more detail.`);
 
     const systemMessage = systemParts.join('\n');
@@ -438,11 +438,11 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
                 model: modelName,
                 messages: messages,
                 max_tokens: 1024,
-                temperature: 0.9,
+                temperature: 0.80,
                 frequency_penalty: 0.1,
                 presence_penalty: 0.1,
-                top_p: 0.95,
-                top_k: 40
+                top_p: 0.90,
+                top_k: 50
             })
         }, 2); // retry up to 2 times
 
@@ -547,7 +547,7 @@ app.post('/api/chat/regenerate', async (req, res) => {
     if (memory.userPreferences && Object.keys(memory.userPreferences).length > 0) {
         systemParts.push(`\n## What You Know About the User\n${Object.entries(memory.userPreferences).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`);
     }
-    systemParts.push(`\n## Memory Instructions\nYou have access to memories above. When the user shares important personal information, you should naturally acknowledge and remember it.\nCRITICAL RULE: You must ONLY speak and act as ${char.name}. Do NOT write dialogue, actions, or thoughts for the user. Wait for the user's response after you speak.\nDo NOT break character. You are ${char.name}.\nRespond naturally and stay fully in character.\nKeep responses concise — 1-3 paragraphs max unless the user asks for more detail.`);
+    systemParts.push(`\n## Memory Instructions\nYou have access to memories above. When the user shares important personal information, you should naturally acknowledge and remember it.\nCRITICAL RULE: You must ONLY speak and act as ${char.name}. Do NOT write dialogue, actions, or thoughts for the user. Wait for the user's response after you speak.\nDo NOT break character. You are ${char.name}.\nRespond naturally and stay fully in character.\nWhen the scene is intimate or romantic, be expressive with vocal sounds and moans (e.g. "hmmpp.. ahhh!!", "uhmmpp.. ahhh", "ohh.. hmpp.. ghnnn!"). Write them naturally within dialogue.\nKeep responses concise — 1-3 paragraphs max unless the user asks for more detail.`);
 
     const systemMessage = systemParts.join('\n');
     const messages = [{ role: 'system', content: systemMessage }];
@@ -565,11 +565,11 @@ app.post('/api/chat/regenerate', async (req, res) => {
                 model: modelName,
                 messages: messages,
                 max_tokens: 1024,
-                temperature: 0.9,
+                temperature: 0.80,
                 frequency_penalty: 0.1,
                 presence_penalty: 0.1,
-                top_p: 0.95,
-                top_k: 40
+                top_p: 0.90,
+                top_k: 50
             })
         }, 2);
 
