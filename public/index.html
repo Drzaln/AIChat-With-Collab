@@ -37,15 +37,15 @@
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Karakter Baru
+                <span data-i18n="sidebar.new_character">Karakter Baru</span>
             </button>
 
-            <div class="sidebar-section-title">Karakter</div>
+            <div class="sidebar-section-title" data-i18n="sidebar.characters">Karakter</div>
             <div id="character-list" class="character-list">
                 <!-- Populated by JS -->
             </div>
 
-            <div class="sidebar-section-title" id="chat-list-title" style="display:none">Chat History</div>
+            <div class="sidebar-section-title" id="chat-list-title" style="display:none" data-i18n="sidebar.chat_history">Chat History</div>
             <div id="chat-list" class="chat-list">
                 <!-- Populated by JS -->
             </div>
@@ -53,7 +53,7 @@
             <div class="sidebar-footer">
                 <div class="connection-status" id="connection-status">
                     <span class="status-dot offline"></span>
-                    <span class="status-text">Disconnected</span>
+                    <span class="status-text" data-i18n="sidebar.disconnected">Disconnected</span>
                 </div>
             </div>
         </aside>
@@ -72,28 +72,28 @@
                 </button>
                 <div class="welcome-container">
                     <div class="welcome-icon">✦</div>
-                    <h1>AI Character Chat</h1>
-                    <p class="welcome-subtitle">Buat karakter AI custom dan chat tanpa batas.</p>
+                    <h1 data-i18n="welcome.title">AI Character Chat</h1>
+                    <p class="welcome-subtitle" data-i18n="welcome.subtitle">Buat karakter AI custom dan chat tanpa batas.</p>
                     <div class="welcome-steps">
                         <div class="step">
                             <div class="step-num">1</div>
                             <div class="step-text">
-                                <strong>Jalankan Colab Notebook</strong>
-                                <span>Buka notebook dan tunggu sampai server ready</span>
+                                <strong data-i18n="welcome.step1.title">Jalankan Colab Notebook</strong>
+                                <span data-i18n="welcome.step1.desc">Buka notebook dan tunggu sampai server ready</span>
                             </div>
                         </div>
                         <div class="step">
                             <div class="step-num">2</div>
                             <div class="step-text">
-                                <strong>Copy Cloudflare URL</strong>
-                                <span>Paste URL ke Settings (ikon ⚙️)</span>
+                                <strong data-i18n="welcome.step2.title">Copy Cloudflare URL</strong>
+                                <span data-i18n="welcome.step2.desc">Paste URL ke Settings (ikon ⚙️)</span>
                             </div>
                         </div>
                         <div class="step">
                             <div class="step-num">3</div>
                             <div class="step-text">
-                                <strong>Buat Karakter & Mulai Chat</strong>
-                                <span>Atur nama, kepribadian, dan mulai percakapan!</span>
+                                <strong data-i18n="welcome.step3.title">Buat Karakter & Mulai Chat</strong>
+                                <span data-i18n="welcome.step3.desc">Atur nama, kepribadian, dan mulai percakapan!</span>
                             </div>
                         </div>
                     </div>
@@ -104,7 +104,7 @@
                                 d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
                             <circle cx="12" cy="12" r="3" />
                         </svg>
-                        Buka Settings
+                        <span data-i18n="welcome.btn_settings">Buka Settings</span>
                     </button>
                 </div>
             </div>
@@ -123,7 +123,7 @@
                     <div class="chat-header-avatar" id="chat-header-avatar">A</div>
                     <div class="chat-header-info">
                         <h2 id="chat-header-name">Character</h2>
-                        <span class="chat-header-status" id="chat-header-status">Online</span>
+                        <span class="chat-header-status" id="chat-header-status" data-i18n="chat.status.online">Online</span>
                     </div>
                     <div class="chat-header-actions">
                         <button class="btn-icon" id="btn-new-chat" title="New Chat">
@@ -160,10 +160,10 @@
                         <span class="typing-dot"></span>
                         <span class="typing-dot"></span>
                         <span class="typing-dot"></span>
-                        <span class="typing-text">sedang mengetik...</span>
+                        <span class="typing-text" data-i18n="chat.typing">sedang mengetik...</span>
                     </div>
                     <form id="chat-form" class="chat-input-form">
-                        <textarea id="chat-input" placeholder="Ketik pesan..." rows="1"></textarea>
+                        <textarea id="chat-input" placeholder="Ketik pesan..." data-i18n-placeholder="chat.input_placeholder" rows="1"></textarea>
                         <button type="submit" class="btn-send" id="btn-send">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -181,7 +181,7 @@
     <div class="modal-overlay" id="modal-settings">
         <div class="modal">
             <div class="modal-header">
-                <h2>⚙️ Settings</h2>
+                <h2 data-i18n="settings.title">⚙️ Settings</h2>
                 <button class="btn-icon modal-close" onclick="closeModal('modal-settings')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -191,16 +191,16 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="cfg-base-url">🌐 Colab Base URL</label>
-                    <input type="url" id="cfg-base-url" placeholder="https://xxxx.trycloudflare.com" class="form-input">
-                    <span class="form-hint">URL Cloudflare dari output Google Colab notebook</span>
+                    <label for="cfg-base-url" data-i18n="settings.colab_url">🌐 Colab Base URL</label>
+                    <input type="url" id="cfg-base-url" placeholder="https://xxxx.trycloudflare.com" data-i18n-placeholder="settings.colab_url_placeholder" class="form-input">
+                    <span class="form-hint" data-i18n="settings.colab_url_hint">URL Cloudflare dari output Google Colab notebook</span>
                 </div>
                 <div class="form-group">
-                    <label for="cfg-api-key">🔑 API Key</label>
+                    <label for="cfg-api-key" data-i18n="settings.api_key">🔑 API Key</label>
                     <input type="text" id="cfg-api-key" placeholder="sk-colab-local" class="form-input">
                 </div>
                 <div class="form-group">
-                    <label for="cfg-model">🤖 Model Name</label>
+                    <label for="cfg-model" data-i18n="settings.model_name">🤖 Model Name</label>
                     <select id="cfg-model" class="form-input">
                         <option value="character1">character1 (default)</option>
                         <option value="hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:IQ4_XS">
@@ -208,12 +208,11 @@
                         <!--<option value="claude-haiku-4-5">claude-haiku-4-5</option>
                         <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>-->
                     </select>
-                    <span class="form-hint">Nama model sesuai mapping di LiteLLM (semua akan diarahkan ke model Ollama
-                        di Colab)</span>
+                    <span class="form-hint" data-i18n="settings.model_name_hint">Nama model sesuai mapping di LiteLLM (semua akan diarahkan ke model Ollama di Colab)</span>
                 </div>
                 <div class="form-actions">
-                    <button class="btn-secondary" id="btn-test-connection">🔌 Test Connection</button>
-                    <button class="btn-primary" id="btn-save-settings">💾 Simpan</button>
+                    <button class="btn-secondary" id="btn-test-connection" data-i18n="settings.btn_test">🔌 Test Connection</button>
+                    <button class="btn-primary" id="btn-save-settings" data-i18n="settings.btn_save">💾 Simpan</button>
                 </div>
                 <div id="connection-result" class="connection-result" style="display:none"></div>
             </div>
@@ -224,7 +223,7 @@
     <div class="modal-overlay" id="modal-character">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h2 id="char-modal-title">✨ Buat Karakter Baru</h2>
+                <h2 id="char-modal-title" data-i18n="char_edit.title_new">✨ Buat Karakter Baru</h2>
                 <button class="btn-icon modal-close" onclick="closeModal('modal-character')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -237,12 +236,21 @@
 
                 <div class="form-row">
                     <div class="form-group flex-1">
-                        <label for="char-name">📛 Nama Karakter</label>
-                        <input type="text" id="char-name" placeholder="Contoh: Luna, Sakura, Aiden..."
+                        <label for="char-name" data-i18n="char_edit.name">📛 Nama Karakter</label>
+                        <input type="text" id="char-name" placeholder="Contoh: Luna, Sakura, Aiden..." data-i18n-placeholder="char_edit.name_placeholder"
                             class="form-input">
                     </div>
+                    <div class="form-group flex-1">
+                        <label for="char-gender" data-i18n="char_edit.gender">⚧ Gender</label>
+                        <select id="char-gender" class="form-input">
+                            <option value="" data-i18n="char_edit.gender_none">Tidak ditentukan</option>
+                            <option value="laki-laki" data-i18n="char_edit.gender_male">Laki-laki</option>
+                            <option value="perempuan" data-i18n="char_edit.gender_female">Perempuan</option>
+                            <option value="non-binary" data-i18n="char_edit.gender_nonbinary">Non-binary</option>
+                        </select>
+                    </div>
                     <div class="form-group avatar-upload-group">
-                        <label>🎨 Avatar</label>
+                        <label data-i18n="char_edit.avatar">🎨 Avatar</label>
                         <div class="avatar-upload-container" id="avatar-upload-container">
                             <input type="file" id="char-avatar-file" accept="image/*" class="avatar-file-input">
                             <div class="avatar-preview" id="avatar-preview">
@@ -251,7 +259,7 @@
                                     <polyline points="17 8 12 3 7 8"/>
                                     <line x1="12" y1="3" x2="12" y2="15"/>
                                 </svg>
-                                <span>Upload</span>
+                                <span data-i18n="char_edit.avatar_upload">Upload</span>
                             </div>
                             <button type="button" class="avatar-remove-btn" id="avatar-remove-btn" style="display:none" title="Hapus avatar">✕</button>
                         </div>
@@ -260,43 +268,43 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="char-personality">🧬 Kepribadian & Deskripsi</label>
+                    <label for="char-personality" data-i18n="char_edit.personality">🧬 Kepribadian & Deskripsi</label>
                     <textarea id="char-personality" rows="5"
                         placeholder="Deskripsikan kepribadian, penampilan, sifat, dan cara bicara karakter ini secara detail..."
-                        class="form-input"></textarea>
-                    <span class="form-hint">Semakin detail deskripsi, semakin konsisten karakter merespons</span>
+                        data-i18n-placeholder="char_edit.personality_placeholder" class="form-input"></textarea>
+                    <span class="form-hint" data-i18n="char_edit.personality_hint">Semakin detail deskripsi, semakin konsisten karakter merespons</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="char-scenario">🎬 Skenario / Latar</label>
+                    <label for="char-scenario" data-i18n="char_edit.scenario">🎬 Skenario / Latar</label>
                     <textarea id="char-scenario" rows="3"
-                        placeholder="Situasi dan latar tempat saat percakapan dimulai..." class="form-input"></textarea>
+                        placeholder="Situasi dan latar tempat saat percakapan dimulai..." data-i18n-placeholder="char_edit.scenario_placeholder" class="form-input"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="char-first-message">💬 Pesan Pertama</label>
+                    <label for="char-first-message" data-i18n="char_edit.first_msg">💬 Pesan Pertama</label>
                     <textarea id="char-first-message" rows="3"
                         placeholder="Pesan pertama yang dikirim karakter saat chat baru dimulai..."
-                        class="form-input"></textarea>
+                        data-i18n-placeholder="char_edit.first_msg_placeholder" class="form-input"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="char-example">📝 Contoh Dialog (opsional)</label>
+                    <label for="char-example" data-i18n="char_edit.example">📝 Contoh Dialog (opsional)</label>
                     <textarea id="char-example" rows="4" placeholder="Contoh cara karakter bicara dan merespons..."
-                        class="form-input"></textarea>
+                        data-i18n-placeholder="char_edit.example_placeholder" class="form-input"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="char-system">⚡ System Prompt Tambahan (opsional)</label>
+                    <label for="char-system" data-i18n="char_edit.system">⚡ System Prompt Tambahan (opsional)</label>
                     <textarea id="char-system" rows="3" placeholder="Instruksi tambahan untuk model AI..."
-                        class="form-input"></textarea>
+                        data-i18n-placeholder="char_edit.system_placeholder" class="form-input"></textarea>
                 </div>
 
                 <div class="form-actions">
-                    <button class="btn-danger" id="btn-delete-character" style="display:none">🗑️ Hapus</button>
+                    <button class="btn-danger" id="btn-delete-character" style="display:none" data-i18n="char_edit.btn_delete">🗑️ Hapus</button>
                     <div style="flex:1"></div>
-                    <button class="btn-secondary" onclick="closeModal('modal-character')">Batal</button>
-                    <button class="btn-primary" id="btn-save-character">💾 Simpan Karakter</button>
+                    <button class="btn-secondary" onclick="closeModal('modal-character')" data-i18n="char_edit.btn_cancel">Batal</button>
+                    <button class="btn-primary" id="btn-save-character" data-i18n="char_edit.btn_save">💾 Simpan Karakter</button>
                 </div>
             </div>
         </div>
@@ -306,7 +314,7 @@
     <div class="modal-overlay" id="modal-memory">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h2>🧠 Memory — <span id="memory-char-name">Character</span></h2>
+                <h2 data-i18n="memory.title">🧠 Memory — <span id="memory-char-name">Character</span></h2>
                 <button class="btn-icon modal-close" onclick="closeModal('modal-memory')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -316,44 +324,63 @@
             </div>
             <div class="modal-body">
                 <div class="memory-section">
-                    <h3>📌 Fakta yang Diingat</h3>
+                    <h3 data-i18n="memory.facts">📌 Fakta yang Diingat</h3>
                     <div id="memory-facts" class="memory-items"></div>
                     <div class="memory-add-row">
-                        <input type="text" id="memory-new-fact" placeholder="Tambah fakta baru..." class="form-input">
-                        <button class="btn-secondary" id="btn-add-fact">+ Tambah</button>
+                        <input type="text" id="memory-new-fact" placeholder="Tambah fakta baru..." data-i18n-placeholder="memory.facts_placeholder" class="form-input">
+                        <button class="btn-secondary" id="btn-add-fact" data-i18n="memory.btn_add">+ Tambah</button>
                     </div>
                 </div>
 
                 <div class="memory-section">
-                    <h3>👤 Info Tentang User</h3>
+                    <h3 data-i18n="memory.user_info">👤 Info Tentang User</h3>
                     <div id="memory-user-prefs" class="memory-items"></div>
                     <div class="memory-add-row">
-                        <input type="text" id="memory-new-pref-key" placeholder="Key (nama, umur...)" class="form-input"
+                        <input type="text" id="memory-new-pref-key" placeholder="Key (nama, umur...)" data-i18n-placeholder="memory.user_key_placeholder" class="form-input"
                             style="width:140px">
-                        <input type="text" id="memory-new-pref-val" placeholder="Value..." class="form-input">
-                        <button class="btn-secondary" id="btn-add-pref">+ Tambah</button>
+                        <input type="text" id="memory-new-pref-val" placeholder="Value..." data-i18n-placeholder="memory.user_val_placeholder" class="form-input">
+                        <button class="btn-secondary" id="btn-add-pref" data-i18n="memory.btn_add">+ Tambah</button>
                     </div>
                 </div>
 
                 <div class="memory-section">
-                    <h3>📅 Event Penting</h3>
+                    <h3 data-i18n="memory.events">📅 Event Penting</h3>
                     <div id="memory-events" class="memory-items"></div>
                     <div class="memory-add-row">
-                        <input type="text" id="memory-new-event" placeholder="Tambah event..." class="form-input">
-                        <button class="btn-secondary" id="btn-add-event">+ Tambah</button>
+                        <input type="text" id="memory-new-event" placeholder="Tambah event..." data-i18n-placeholder="memory.events_placeholder" class="form-input">
+                        <button class="btn-secondary" id="btn-add-event" data-i18n="memory.btn_add">+ Tambah</button>
                     </div>
                 </div>
 
                 <div class="memory-section">
-                    <h3>📋 Ringkasan Percakapan</h3>
+                    <h3 data-i18n="memory.summary">📋 Ringkasan Percakapan</h3>
                     <div id="memory-summaries" class="memory-items"></div>
                 </div>
 
                 <div class="form-actions">
-                    <button class="btn-secondary" id="btn-summarize-memory">🤖 AI Summarize Chat</button>
+                    <button class="btn-secondary" id="btn-summarize-memory" data-i18n="memory.btn_ai_summary">🤖 AI Summarize Chat</button>
                     <div style="flex:1"></div>
-                    <button class="btn-primary" id="btn-save-memory">💾 Simpan Memory</button>
+                    <button class="btn-primary" id="btn-save-memory" data-i18n="memory.btn_save">💾 Simpan Memory</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL: Language Warning ═══ -->
+    <div class="modal-overlay" id="modal-lang-warning">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 data-i18n="env.warning_title">⚠️ Peringatan Konfigurasi Bahasa</h2>
+                <button class="btn-icon modal-close" onclick="closeModal('modal-lang-warning')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p data-i18n="env.warning_desc" style="margin-bottom: 20px;">Bahasa yang Anda atur di .env tidak didukung atau kosong. Sistem akan menggunakan bahasa Inggris (EN) sebagai default.</p>
+                <button class="btn-primary" onclick="closeModal('modal-lang-warning')" data-i18n="env.warning_btn">Mengerti</button>
             </div>
         </div>
     </div>

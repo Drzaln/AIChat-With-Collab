@@ -15,6 +15,9 @@ let state = {
     config: {}
 };
 
+window.langData = {};
+window.t = (key) => window.langData[key] || key;
+
 // ── DOM Refs ─────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -79,6 +82,35 @@ async function loadConfig() {
     $('#cfg-base-url').value = state.config.baseUrl || '';
     $('#cfg-api-key').value = state.config.apiKey || 'sk-colab-local';
     $('#cfg-model').value = state.config.modelName || 'character1';
+    
+    if (state.config.uiLang) {
+        await loadLanguage(state.config.uiLang, state.config.showLangWarning);
+    }
+}
+
+async function loadLanguage(langCode, showWarning) {
+    try {
+        const res = await fetch(`/Lang/${langCode}.json`);
+        if (res.ok) {
+            window.langData = await res.json();
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (window.langData[key]) el.innerHTML = window.langData[key];
+            });
+            
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (window.langData[key]) el.placeholder = window.langData[key];
+            });
+            
+            if (showWarning && typeof openModal === 'function') {
+                openModal('modal-lang-warning');
+            }
+        }
+    } catch(err) {
+        console.error('Failed to load language', err);
+    }
 }
 
 async function saveConfig() {
@@ -88,7 +120,7 @@ async function saveConfig() {
 
     await api('POST', '/api/config', { baseUrl, apiKey, modelName });
     state.config = { baseUrl, apiKey, modelName };
-    toast('Settings saved!', 'success');
+    toast(t('toast.settings_saved'), 'success');
     closeModal('modal-settings');
     testConnection();
 }
@@ -132,7 +164,7 @@ function renderCharacterList() {
     if (state.characters.length === 0) {
         list.innerHTML = `
             <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
-                Belum ada karakter.<br>Buat karakter pertama mu! ✨
+                ${t('app.no_chars')}
             </div>`;
         return;
     }
@@ -183,9 +215,10 @@ async function selectCharacter(id) {
 function openCharacterEditor(editId = null) {
     const char = editId ? state.characters.find(c => c.id === editId) : null;
 
-    $('#char-modal-title').textContent = char ? '✏️ Edit Karakter' : '✨ Buat Karakter Baru';
+    $('#char-modal-title').textContent = char ? t('char_edit.title_edit') : t('char_edit.title_new');
     $('#char-edit-id').value = editId || '';
     $('#char-name').value = char ? char.name : '';
+    $('#char-gender').value = char ? (char.gender || '') : '';
     $('#char-avatar').value = char ? (char.avatar || '') : '';
     // Update avatar preview after modal opens
     setTimeout(() => updateAvatarPreview($('#char-avatar').value), 50);
@@ -204,6 +237,7 @@ async function saveCharacter() {
     const editId = $('#char-edit-id').value;
     const data = {
         name: $('#char-name').value.trim() || 'Unnamed',
+        gender: $('#char-gender').value,
         avatar: $('#char-avatar').value.trim(),
         personality: $('#char-personality').value.trim(),
         scenario: $('#char-scenario').value.trim(),
@@ -214,10 +248,10 @@ async function saveCharacter() {
 
     if (editId) {
         await api('PUT', `/api/characters/${editId}`, data);
-        toast('Character updated!', 'success');
+        toast(t('toast.char_updated'), 'success');
     } else {
         const newChar = await api('POST', '/api/characters', data);
-        toast('Character created!', 'success');
+        toast(t('toast.char_created'), 'success');
         state.currentCharacterId = newChar.id;
     }
 
@@ -232,10 +266,10 @@ async function saveCharacter() {
 async function deleteCharacter() {
     const editId = $('#char-edit-id').value;
     if (!editId) return;
-    if (!confirm('Hapus karakter ini beserta semua chat dan memory?')) return;
+    if (!confirm(t('app.confirm_delete_char'))) return;
 
     await api('DELETE', `/api/characters/${editId}`);
-    toast('Character deleted', 'success');
+    toast(t('toast.char_deleted'), 'success');
     closeModal('modal-character');
 
     state.currentCharacterId = null;
@@ -314,7 +348,7 @@ async function loadChat(chatId) {
 }
 
 async function deleteChat(chatId) {
-    if (!confirm('Hapus chat ini?')) return;
+    if (!confirm(t('app.confirm_delete_chat'))) return;
     await api('DELETE', `/api/chat/${chatId}`);
 
     if (state.currentChatId === chatId) {
@@ -344,7 +378,7 @@ function renderMessages(messages) {
         container.innerHTML = `
             <div class="empty-chat">
                 <div class="empty-chat-icon">💬</div>
-                <p>Mulai percakapan...</p>
+                <p>${t('chat.empty')}</p>
             </div>`;
         return;
     }
@@ -587,8 +621,8 @@ window.editMessage = async function (index) {
     editContainer.innerHTML = `
         <textarea class="message-edit-textarea" id="edit-textarea-${index}">${escapeHtml(originalContent)}</textarea>
         <div class="message-edit-actions">
-            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="cancelEdit(${index})">Batal</button>
-            <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="saveEdit(${index})">Simpan</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="cancelEdit(${index})">${t('btn.cancel')}</button>
+            <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="saveEdit(${index})">${t('btn.save')}</button>
         </div>
     `;
 
@@ -632,7 +666,7 @@ window.saveEdit = async function (index) {
 
     const btn = textarea.nextElementSibling.querySelector('.btn-primary');
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = t('btn.saving');
 
     try {
         const result = await api('PUT', `/api/chat/${state.currentChatId}/message`, {
@@ -643,7 +677,7 @@ window.saveEdit = async function (index) {
         if (result.error) {
             toast(result.error, 'error');
             btn.disabled = false;
-            btn.textContent = 'Simpan';
+            btn.textContent = t('btn.save');
             return;
         }
 
@@ -651,7 +685,7 @@ window.saveEdit = async function (index) {
     } catch (err) {
         toast(`Error: ${err.message}`, 'error');
         btn.disabled = false;
-        btn.textContent = 'Simpan';
+        btn.textContent = t('btn.save');
     }
 };
 
@@ -682,7 +716,7 @@ function renderMemory() {
             <span class="memory-item-text">${escapeHtml(f)}</span>
             <button class="memory-item-delete" onclick="removeMemoryItem('facts', ${i})">✕</button>
         </div>
-    `).join('') || '<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">Belum ada fakta tersimpan</div>';
+    `).join('') || `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">${t('memory.empty_facts')}</div>`;
 
     // User preferences
     const prefsEl = $('#memory-user-prefs');
@@ -693,7 +727,7 @@ function renderMemory() {
             <span class="memory-item-text">${escapeHtml(v)}</span>
             <button class="memory-item-delete" onclick="removeMemoryPref('${escapeHtml(k)}')">✕</button>
         </div>
-    `).join('') || '<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">Belum ada info user</div>';
+    `).join('') || `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">${t('memory.empty_user')}</div>`;
 
     // Events
     const eventsEl = $('#memory-events');
@@ -703,7 +737,7 @@ function renderMemory() {
             <span class="memory-item-text">${escapeHtml(e.description)}</span>
             <button class="memory-item-delete" onclick="removeMemoryItem('importantEvents', ${i})">✕</button>
         </div>
-    `).join('') || '<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">Belum ada event</div>';
+    `).join('') || `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">${t('memory.empty_events')}</div>`;
 
     // Summaries
     const summariesEl = $('#memory-summaries');
@@ -712,7 +746,7 @@ function renderMemory() {
             <span class="memory-item-text">${escapeHtml(s)}</span>
             <button class="memory-item-delete" onclick="removeMemoryItem('summaries', ${i})">✕</button>
         </div>
-    `).join('') || '<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">Belum ada ringkasan</div>';
+    `).join('') || `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">${t('memory.empty_summary')}</div>`;
 }
 
 function removeMemoryItem(key, index) {
@@ -766,19 +800,19 @@ function addMemoryEvent() {
 async function saveMemory() {
     if (!state.currentCharacterId || !state.memory) return;
     await api('PUT', `/api/memory/${state.currentCharacterId}`, state.memory);
-    toast('Memory saved!', 'success');
+    toast(t('toast.memory_saved'), 'success');
     closeModal('modal-memory');
 }
 
 async function summarizeMemory() {
     if (!state.currentCharacterId || !state.currentChatId) {
-        toast('Pilih chat terlebih dahulu', 'error');
+        toast(t('toast.select_chat_first'), 'error');
         return;
     }
 
     const btn = $('#btn-summarize-memory');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Summarizing...';
+    btn.innerHTML = '<span class="spinner"></span> ' + t('btn.saving');
 
     try {
         const result = await api('POST', `/api/memory/${state.currentCharacterId}/summarize`, {
@@ -790,7 +824,7 @@ async function summarizeMemory() {
         } else {
             state.memory = result.memory;
             renderMemory();
-            toast('Memory summarized by AI!', 'success');
+            toast(t('toast.memory_summarized'), 'success');
         }
     } catch (err) {
         toast(`Error: ${err.message}`, 'error');

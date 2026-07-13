@@ -44,13 +44,29 @@ function writeJSON(filePath, data) {
 // ══════════════════════════════════════════════════════════════
 //  CONFIG API — read/update .env settings
 // ══════════════════════════════════════════════════════════════
+let hasShownLangWarning = false;
+
 
 app.get('/api/config', (req, res) => {
+    let uiLang = process.env.UI_LANG ? process.env.UI_LANG.toUpperCase() : '';
+    let showLangWarning = false;
+
+    // Fallback logic
+    if (!uiLang || !fs.existsSync(path.join(__dirname, 'public', 'Lang', `${uiLang}.json`))) {
+        uiLang = 'EN';
+        if (!hasShownLangWarning) {
+            showLangWarning = true;
+            hasShownLangWarning = true; // Only show once per server start
+        }
+    }
+
     res.json({
         baseUrl: process.env.BASE_URL || '',
         apiKey: process.env.API_KEY || 'sk-colab-local',
         modelName: process.env.MODEL_NAME || 'character1',
-        port: process.env.PORT || 3000
+        port: process.env.PORT || 3000,
+        uiLang: uiLang,
+        showLangWarning: showLangWarning
     });
 });
 
@@ -103,6 +119,7 @@ app.post('/api/characters', (req, res) => {
     const char = {
         id,
         name: req.body.name || 'Unnamed',
+        gender: req.body.gender || '',
         avatar: req.body.avatar || '',
         personality: req.body.personality || '',
         scenario: req.body.scenario || '',
@@ -136,6 +153,7 @@ app.put('/api/characters/:id', (req, res) => {
     const updated = {
         ...existing,
         name: req.body.name ?? existing.name,
+        gender: req.body.gender ?? existing.gender,
         avatar: req.body.avatar ?? existing.avatar,
         personality: req.body.personality ?? existing.personality,
         scenario: req.body.scenario ?? existing.scenario,
@@ -368,7 +386,8 @@ app.post('/api/chat/send', async (req, res) => {
     let systemParts = [];
 
     // Core character identity
-    systemParts.push(`You are ${char.name}. You must stay in character at all times.`);
+    let genderStr = char.gender ? ` You are a ${char.gender}.` : '';
+    systemParts.push(`You are ${char.name}.${genderStr} You must stay in character at all times.`);
 
     if (char.personality) {
         systemParts.push(`\n## Personality & Description\n${char.personality}`);
@@ -536,7 +555,8 @@ app.post('/api/chat/regenerate', async (req, res) => {
     }
 
     let systemParts = [];
-    systemParts.push(`You are ${char.name}. You must stay in character at all times.`);
+    let genderStr = char.gender ? ` You are a ${char.gender}.` : '';
+    systemParts.push(`You are ${char.name}.${genderStr} You must stay in character at all times.`);
     if (char.personality) systemParts.push(`\n## Personality & Description\n${char.personality}`);
     if (char.scenario) systemParts.push(`\n## Current Scenario\n${char.scenario}`);
     if (char.systemPrompt) systemParts.push(`\n## Additional Instructions\n${char.systemPrompt}`);
