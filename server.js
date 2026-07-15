@@ -804,12 +804,18 @@ summary text here`
             importantEvents: [], userPreferences: {}
         });
 
+        // Ensure arrays exist (if loaded from an old file without these keys)
+        memory.facts = memory.facts || [];
+        memory.summaries = memory.summaries || [];
+        memory.importantEvents = memory.importantEvents || [];
+        memory.userPreferences = memory.userPreferences || {};
+
         // Extract facts
         const factsMatch = result.match(/KEY_FACTS:\s*\n([\s\S]*?)(?=EVENTS:|SUMMARY:|$)/);
         if (factsMatch) {
             const newFacts = factsMatch[1].split('\n')
                 .map(l => l.replace(/^-\s*/, '').trim())
-                .filter(l => l.length > 0);
+                .filter(l => l.length > 0 && !['none', 'n/a', '-'].includes(l.toLowerCase()));
             newFacts.forEach(f => {
                 if (!memory.facts.includes(f)) memory.facts.push(f);
             });
@@ -820,7 +826,7 @@ summary text here`
         if (eventsMatch) {
             const newEvents = eventsMatch[1].split('\n')
                 .map(l => l.replace(/^-\s*/, '').trim())
-                .filter(l => l.length > 0)
+                .filter(l => l.length > 0 && !['none', 'n/a', '-'].includes(l.toLowerCase()))
                 .map(e => ({ description: e, date: new Date().toISOString().split('T')[0] }));
             memory.importantEvents.push(...newEvents);
         }
@@ -829,7 +835,9 @@ summary text here`
         const summaryMatch = result.match(/SUMMARY:\s*\n?([\s\S]*?)$/);
         if (summaryMatch) {
             const summary = summaryMatch[1].trim();
-            if (summary) memory.summaries.push(summary);
+            if (summary && !['none', 'n/a', '-'].includes(summary.toLowerCase())) {
+                memory.summaries.push(summary);
+            }
         }
 
         memory.lastUpdated = new Date().toISOString();

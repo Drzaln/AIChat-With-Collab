@@ -830,7 +830,7 @@ async function summarizeMemory() {
         toast(`Error: ${err.message}`, 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '🤖 AI Summarize Chat';
+        btn.innerHTML = t('memory.btn_ai_summary') || '🤖 AI Summarize Chat';
     }
 }
 
