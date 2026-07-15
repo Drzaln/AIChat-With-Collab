@@ -133,7 +133,7 @@ async function testConnection() {
 
     if (result.ok) {
         statusDot.className = 'status-dot online';
-        statusText.textContent = 'Connected to Colab';
+        statusText.textContent = t('sidebar.connected') || 'Connected to Colab';
         if (resultEl) {
             resultEl.style.display = 'block';
             resultEl.className = 'connection-result success';
@@ -141,7 +141,7 @@ async function testConnection() {
         }
     } else {
         statusDot.className = 'status-dot offline';
-        statusText.textContent = result.error || 'Disconnected';
+        statusText.textContent = result.error || t('sidebar.disconnected') || 'Disconnected';
         if (resultEl) {
             resultEl.style.display = 'block';
             resultEl.className = 'connection-result error';
@@ -929,7 +929,7 @@ function bindEvents() {
         state.config = { baseUrl, apiKey, modelName };
         await testConnection();
         btn.disabled = false;
-        btn.innerHTML = '🔌 Test Connection';
+        btn.innerHTML = t('settings.btn_test') || '🔌 Test Connection';
     });
 
     // Character
