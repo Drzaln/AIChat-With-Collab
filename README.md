@@ -1,14 +1,14 @@
 # AICHAT DENGAN COLLAB - AICHAT WITH COLLAB
 
-Aplikasi obrolan canggih yang terintegrasi secara mulus dengan proksi LiteLLM menggunakan infrastruktur Google Colab.
+- Aplikasi obrolan canggih yang terintegrasi secara mulus dengan proksi LiteLLM menggunakan infrastruktur Google Colab.
 --------
-An advanced chat application seamlessly integrating with the LiteLLM proxy via Google Colab infrastructure.
+- An advanced chat application seamlessly integrating with the LiteLLM proxy via Google Colab infrastructure.
 
 ## DESKRIPSI SINGKAT - BRIEF DESCRIPTION
 
-Proyek ini memungkinkan Anda untuk menjalankan server Large Language Model (LLM) mandiri melalui Google Colab dan menghubungkannya dengan klien obrolan lokal Anda. Pengguna cukup mengunggah berkas `colab_llm_server.ipynb` ke Google Colab atau menyalin skrip dari `colab_llm_server.py` ke dalam sel Colab, lalu menggunakan runtime GPU untuk performa optimal. Setelah proses instalasi diinisialisasi, server akan menghasilkan kredensial berupa `API_KEY` dan `BASE_URL`, yang selanjutnya digunakan untuk mengonfigurasi environment lokal pada berkas `.env.example`.
+- Proyek ini memungkinkan Anda untuk menjalankan server Large Language Model (LLM) mandiri melalui Google Colab dan menghubungkannya dengan klien obrolan lokal Anda. Pengguna cukup mengunggah berkas `colab_llm_server.ipynb` ke Google Colab atau menyalin skrip dari `colab_llm_server.py` ke dalam sel Colab, lalu menggunakan runtime GPU untuk performa optimal. Setelah proses instalasi diinisialisasi, server akan menghasilkan kredensial berupa `API_KEY` dan `BASE_URL`, yang selanjutnya digunakan untuk mengonfigurasi environment lokal pada berkas `.env.example`.
 --------
-This project enables you to run a standalone Large Language Model (LLM) server via Google Colab and interface it with your local chat client. Users simply need to upload the `colab_llm_server.ipynb` file to Google Colab or copy the script from `colab_llm_server.py` into a Colab cell, and select a GPU runtime for optimal performance. Once the installation process is initialized, the server will generate the necessary credentials, specifically an `API_KEY` and `BASE_URL`, which are then used to configure your local environment in the `.env.example` file.
+- This project enables you to run a standalone Large Language Model (LLM) server via Google Colab and interface it with your local chat client. Users simply need to upload the `colab_llm_server.ipynb` file to Google Colab or copy the script from `colab_llm_server.py` into a Colab cell, and select a GPU runtime for optimal performance. Once the installation process is initialized, the server will generate the necessary credentials, specifically an `API_KEY` and `BASE_URL`, which are then used to configure your local environment in the `.env.example` file.
 
 ## SPESIFIKASI MINIMUM - MINIMUM SPECIFICATIONS
 
