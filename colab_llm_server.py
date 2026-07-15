@@ -49,8 +49,11 @@ import subprocess, time, os, re, requests
 
 # f947 REKOMENDASI: Coding specialist, abliterated (no refusals)
 #MODEL = "hf.co/bartowski/Qwen2.5-Coder-14B-Instruct-abliterated-GGUF:Q6_K"
-MODEL = "hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:IQ4_XS"
+
+#MODEL = "hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:IQ4_XS"
 #MODEL = "hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:Q6_K"
+#MODEL = "hf.co/bartowski/nbeerbower_Dumpling-Qwen2.5-14B-GGUF:Q6_K"
+MODEL = "hf.co/mradermacher/EVA-abliterated-TIES-Qwen2.5-14B-i1-GGUF:Q6_K"
 
 # f948 Qwen3 generasi terbaru, reasoning lebih baik
 # MODEL = "hf.co/richardyoung/Qwen3-14B-abliterated-GGUF:Q6_K"
@@ -145,11 +148,7 @@ else:
 # ── 2. START OLLAMA SERVER ────────────────────────────
 section(2, 5, "Start Ollama Server")
 ollama_proc = bg(
-    "OLLAMA_HOST=0.0.0.0:11434 "
-    "OLLAMA_ORIGINS='*' "
-    "OLLAMA_NUM_PARALLEL=1 "
-    "OLLAMA_FLASH_ATTENTION=1 "
-    "ollama serve",
+    "OLLAMA_HOST=0.0.0.0:11434 OLLAMA_ORIGINS='*' ollama serve",
     "/tmp/ollama.log"
 )
 time.sleep(3)
@@ -164,12 +163,9 @@ sh(f"ollama pull {MODEL}")
 # Alias ke nama pendek agar LiteLLM bisa referensikan dengan mudah
 with open("/tmp/Modelfile", "w") as f:
     f.write(f"FROM {MODEL}\n")
-    f.write("PARAMETER num_ctx 8192\n")        # Context window 8K (default: 2048 — too small)
-    f.write("PARAMETER num_predict 1024\n")     # Default max_tokens safety ceiling
-    f.write("PARAMETER repeat_penalty 1.1\n")   # Reduce verbose/repetitive output
-result = sh("ollama create character1 -f /tmp/Modelfile", check=False, capture=True)
+result = sh("ollama create character -f /tmp/Modelfile", check=False, capture=True)
 if result.returncode == 0:
-    print(f"\n  ✅ Model ready, aliased as 'character1'")
+    print(f"\n  ✅ Model ready, aliased as 'character'")
 else:
     # Fallback: gunakan nama lengkap langsung di LiteLLM
     print(f"\n  ℹ️  Alias tidak dibuat, akan gunakan nama model langsung")
@@ -182,7 +178,7 @@ sh("pip install -q 'litellm[proxy]'")
 
 # Tentukan nama model Ollama yang akan dipakai
 # Jika alias 'coder' berhasil dibuat, pakai itu; jika tidak, pakai nama asli HF
-ollama_model_name = "character1" if result.returncode == 0 else MODEL.replace("hf.co/", "hf.co/")
+ollama_model_name = "character" if result.returncode == 0 else MODEL.replace("hf.co/", "hf.co/")
 
 # Map semua nama model
 LLMs_models = [

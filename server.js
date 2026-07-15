@@ -9,6 +9,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -885,11 +886,27 @@ app.get('*', (req, res) => {
 
 // ── Start ───────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
+    const nets = os.networkInterfaces();
+    let localIp = '127.0.0.1';
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if ((net.family === 'IPv4' || net.family === 4) && !net.internal) {
+                localIp = net.address;
+                break;
+            }
+        }
+        if (localIp !== '127.0.0.1') break;
+    }
+
+    const localUrl = `http://localhost:${PORT}`;
+    const networkUrl = `http://${localIp}:${PORT}`;
+    const colabUrl = (process.env.BASE_URL || 'NOT SET').substring(0, 49);
+
     console.log(`\n╔══════════════════════════════════════════════════════════════╗`);
-    console.log(`║   🌐  AI Character Chat — Running!                          ║`);
+    console.log(`║   🌐  AI Character Chat — Running!                           ║`);
     console.log(`╠══════════════════════════════════════════════════════════════╣`);
-    console.log(`║   Local  : http://localhost:${PORT}                            ║`);
-    console.log(`║   Network: http://0.0.0.0:${PORT}                             ║`);
-    console.log(`║   Colab  : ${(process.env.BASE_URL || 'NOT SET').substring(0, 47).padEnd(47)}║`);
+    console.log(`║   Local  : ${localUrl.padEnd(49)}║`);
+    console.log(`║   Network: ${networkUrl.padEnd(49)}║`);
+    console.log(`║   Colab  : ${colabUrl.padEnd(49)}║`);
     console.log(`╚══════════════════════════════════════════════════════════════╝\n`);
 });
