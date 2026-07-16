@@ -900,13 +900,13 @@ app.listen(PORT, '0.0.0.0', () => {
 
     const localUrl = `http://localhost:${PORT}`;
     const networkUrl = `http://${localIp}:${PORT}`;
-    const colabUrl = (process.env.BASE_URL || 'NOT SET').substring(0, 49);
+    const colabUrl = (process.env.BASE_URL || 'NOT SET').substring(0, 50);
 
     console.log(`\n╔══════════════════════════════════════════════════════════════╗`);
     console.log(`║   🌐  AI Character Chat — Running!                           ║`);
     console.log(`╠══════════════════════════════════════════════════════════════╣`);
-    console.log(`║   Local  : ${localUrl.padEnd(49)}║`);
-    console.log(`║   Network: ${networkUrl.padEnd(49)}║`);
-    console.log(`║   Colab  : ${colabUrl.padEnd(49)}║`);
+    console.log(`║  Local  : ${localUrl.padEnd(50)} ║`);
+    console.log(`║  Network: ${networkUrl.padEnd(50)} ║`);
+    console.log(`║  Colab  : ${colabUrl.padEnd(50)} ║`);
     console.log(`╚══════════════════════════════════════════════════════════════╝\n`);
 });
