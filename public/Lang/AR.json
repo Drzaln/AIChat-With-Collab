@@ -36,6 +36,8 @@
   "char_edit.gender_male": "ذكر",
   "char_edit.gender_female": "أنثى",
   "char_edit.gender_nonbinary": "غير ثنائي",
+  "char_edit.age": "🎂 العمر",
+  "char_edit.age_placeholder": "مثال: 18، 20...",
   "char_edit.avatar": "🎨 الصورة الرمزية",
   "char_edit.avatar_upload": "رفع",
   "char_edit.personality": "🧬 الشخصية والوصف",

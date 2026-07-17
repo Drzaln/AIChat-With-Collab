@@ -36,6 +36,8 @@
   "char_edit.gender_male": "Laki-laki",
   "char_edit.gender_female": "Perempuan",
   "char_edit.gender_nonbinary": "Non-binary",
+  "char_edit.age": "🎂 Umur",
+  "char_edit.age_placeholder": "Contoh: 18, 20an...",
   "char_edit.avatar": "🎨 Avatar",
   "char_edit.avatar_upload": "Upload",
   "char_edit.personality": "🧬 Kepribadian & Deskripsi",

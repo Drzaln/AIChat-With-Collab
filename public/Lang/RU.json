@@ -36,6 +36,8 @@
   "char_edit.gender_male": "Мужской",
   "char_edit.gender_female": "Женский",
   "char_edit.gender_nonbinary": "Небинарный",
+  "char_edit.age": "🎂 Возраст",
+  "char_edit.age_placeholder": "Напр.: 18, 20-е...",
   "char_edit.avatar": "🎨 Аватар",
   "char_edit.avatar_upload": "Загрузить",
   "char_edit.personality": "🧬 Характер и Описание",

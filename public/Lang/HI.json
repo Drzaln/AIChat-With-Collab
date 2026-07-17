@@ -36,6 +36,8 @@
   "char_edit.gender_male": "पुरुष",
   "char_edit.gender_female": "महिला",
   "char_edit.gender_nonbinary": "नॉन-बाइनरी",
+  "char_edit.age": "🎂 आयु",
+  "char_edit.age_placeholder": "उदाहरण: 18, 20...",
   "char_edit.avatar": "🎨 अवतार",
   "char_edit.avatar_upload": "अपलोड करें",
   "char_edit.personality": "🧬 व्यक्तित्व और विवरण",

@@ -36,6 +36,8 @@
   "char_edit.gender_male": "男性",
   "char_edit.gender_female": "女性",
   "char_edit.gender_nonbinary": "ノンバイナリー",
+  "char_edit.age": "🎂 年齢",
+  "char_edit.age_placeholder": "例：18、20代...",
   "char_edit.avatar": "🎨 アバター",
   "char_edit.avatar_upload": "アップロード",
   "char_edit.personality": "🧬 性格と説明",

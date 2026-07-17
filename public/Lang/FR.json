@@ -36,6 +36,8 @@
   "char_edit.gender_male": "Homme",
   "char_edit.gender_female": "Femme",
   "char_edit.gender_nonbinary": "Non-binaire",
+  "char_edit.age": "🎂 Âge",
+  "char_edit.age_placeholder": "Ex.: 18, 20 ans...",
   "char_edit.avatar": "🎨 Avatar",
   "char_edit.avatar_upload": "Télécharger",
   "char_edit.personality": "🧬 Personnalité & Description",

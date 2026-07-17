@@ -121,6 +121,7 @@ app.post('/api/characters', (req, res) => {
         id,
         name: req.body.name || 'Unnamed',
         gender: req.body.gender || '',
+        age: req.body.age || '',
         avatar: req.body.avatar || '',
         personality: req.body.personality || '',
         scenario: req.body.scenario || '',
@@ -155,6 +156,7 @@ app.put('/api/characters/:id', (req, res) => {
         ...existing,
         name: req.body.name ?? existing.name,
         gender: req.body.gender ?? existing.gender,
+        age: req.body.age ?? existing.age,
         avatar: req.body.avatar ?? existing.avatar,
         personality: req.body.personality ?? existing.personality,
         scenario: req.body.scenario ?? existing.scenario,
@@ -388,7 +390,8 @@ app.post('/api/chat/send', async (req, res) => {
 
     // Core character identity
     let genderStr = char.gender ? ` You are a ${char.gender}.` : '';
-    systemParts.push(`You are ${char.name}.${genderStr} You must stay in character at all times.`);
+    let ageStr = char.age ? ` You are ${char.age} years old.` : '';
+    systemParts.push(`You are ${char.name}.${genderStr}${ageStr} You must stay in character at all times.`);
 
     if (char.personality) {
         systemParts.push(`\n## Personality & Description\n${char.personality}`);
@@ -557,7 +560,8 @@ app.post('/api/chat/regenerate', async (req, res) => {
 
     let systemParts = [];
     let genderStr = char.gender ? ` You are a ${char.gender}.` : '';
-    systemParts.push(`You are ${char.name}.${genderStr} You must stay in character at all times.`);
+    let ageStr = char.age ? ` You are ${char.age} years old.` : '';
+    systemParts.push(`You are ${char.name}.${genderStr}${ageStr} You must stay in character at all times.`);
     if (char.personality) systemParts.push(`\n## Personality & Description\n${char.personality}`);
     if (char.scenario) systemParts.push(`\n## Current Scenario\n${char.scenario}`);
     if (char.systemPrompt) systemParts.push(`\n## Additional Instructions\n${char.systemPrompt}`);

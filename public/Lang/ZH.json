@@ -36,6 +36,8 @@
   "char_edit.gender_male": "男",
   "char_edit.gender_female": "女",
   "char_edit.gender_nonbinary": "非二元性别",
+  "char_edit.age": "🎂 年龄",
+  "char_edit.age_placeholder": "例如：18，20多岁...",
   "char_edit.avatar": "🎨 头像",
   "char_edit.avatar_upload": "上传",
   "char_edit.personality": "🧬 性格与描述",

@@ -36,6 +36,8 @@
   "char_edit.gender_male": "남성",
   "char_edit.gender_female": "여성",
   "char_edit.gender_nonbinary": "논바이너리",
+  "char_edit.age": "🎂 나이",
+  "char_edit.age_placeholder": "예: 18, 20대...",
   "char_edit.avatar": "🎨 아바타",
   "char_edit.avatar_upload": "업로드",
   "char_edit.personality": "🧬 성격 및 설명",

@@ -36,6 +36,8 @@
   "char_edit.gender_male": "Männlich",
   "char_edit.gender_female": "Weiblich",
   "char_edit.gender_nonbinary": "Nicht-binär",
+  "char_edit.age": "🎂 Alter",
+  "char_edit.age_placeholder": "Z.B.: 18, 20er...",
   "char_edit.avatar": "🎨 Avatar",
   "char_edit.avatar_upload": "Hochladen",
   "char_edit.personality": "🧬 Persönlichkeit & Beschreibung",

@@ -254,6 +254,7 @@ function openCharacterEditor(editId = null) {
     $('#char-edit-id').value = editId || '';
     $('#char-name').value = char ? char.name : '';
     $('#char-gender').value = char ? (char.gender || '') : '';
+    $('#char-age').value = char ? (char.age || '') : '';
     $('#char-avatar').value = char ? (char.avatar || '') : '';
     // Update avatar preview after modal opens
     setTimeout(() => updateAvatarPreview($('#char-avatar').value), 50);
@@ -273,6 +274,7 @@ async function saveCharacter() {
     const data = {
         name: $('#char-name').value.trim() || 'Unnamed',
         gender: $('#char-gender').value,
+        age: $('#char-age').value.trim(),
         avatar: $('#char-avatar').value.trim(),
         personality: $('#char-personality').value.trim(),
         scenario: $('#char-scenario').value.trim(),
