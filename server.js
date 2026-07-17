@@ -153,7 +153,7 @@ app.put('/api/characters/:id', (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Not found' });
 
     const updated = {
-        ...existing,
+        id: existing.id,
         name: req.body.name ?? existing.name,
         gender: req.body.gender ?? existing.gender,
         age: req.body.age ?? existing.age,
@@ -164,6 +164,7 @@ app.put('/api/characters/:id', (req, res) => {
         exampleDialogue: req.body.exampleDialogue ?? existing.exampleDialogue,
         systemPrompt: req.body.systemPrompt ?? existing.systemPrompt,
         tags: req.body.tags ?? existing.tags,
+        createdAt: existing.createdAt,
         updatedAt: new Date().toISOString()
     };
     writeJSON(fp, updated);
