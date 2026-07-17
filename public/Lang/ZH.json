@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "新角色",
   "sidebar.characters": "角色",
+  "sidebar.search_characters": "搜索角色...",
   "sidebar.chat_history": "聊天记录",
   "sidebar.disconnected": "已断开连接",
   "sidebar.connected": "已连接到 Colab",
@@ -68,6 +69,7 @@
   "memory.empty_events": "尚无事件",
   "memory.empty_summary": "尚无摘要",
   "app.no_chars": "还没有角色。<br>创建您的第一个角色吧！ ✨",
+  "app.no_search_results": "没有找到匹配的角色。",
   "app.confirm_delete_char": "删除该角色及其所有聊天记录和记忆？",
   "app.confirm_delete_chat": "删除此聊天？",
   "toast.settings_saved": "设置已保存！",

@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "새 캐릭터",
   "sidebar.characters": "캐릭터 목록",
+  "sidebar.search_characters": "캐릭터 검색...",
   "sidebar.chat_history": "채팅 기록",
   "sidebar.disconnected": "연결 끊김",
   "sidebar.connected": "Colab 연결됨",
@@ -68,6 +69,7 @@
   "memory.empty_events": "아직 이벤트가 없습니다",
   "memory.empty_summary": "아직 요약이 없습니다",
   "app.no_chars": "아직 캐릭터가 없습니다.<br>첫 번째 캐릭터를 만들어보세요! ✨",
+  "app.no_search_results": "검색 결과와 일치하는 캐릭터가 없습니다.",
   "app.confirm_delete_char": "이 캐릭터와 모든 채팅 및 기억을 삭제하시겠습니까?",
   "app.confirm_delete_chat": "이 채팅을 삭제하시겠습니까?",
   "toast.settings_saved": "설정이 저장되었습니다!",

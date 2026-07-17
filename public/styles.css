@@ -189,6 +189,65 @@ body {
     color: var(--text-muted);
 }
 
+/* Character Search */
+.sidebar-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0 14px 10px;
+}
+
+.sidebar-search-icon {
+    position: absolute;
+    left: 11px;
+    color: var(--text-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.sidebar-search-input {
+    width: 100%;
+    padding: 9px 32px 9px 32px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.sidebar-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.sidebar-search-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-primary-glow);
+}
+
+.sidebar-search-clear {
+    position: absolute;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.sidebar-search-clear:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
 .character-list,
 .chat-list {
     flex: 1;
@@ -1411,6 +1470,10 @@ select.form-input {
 
 .toast.error {
     border-color: rgba(248, 113, 113, 0.4);
+}
+
+.toast.warning {
+    border-color: rgba(251, 191, 36, 0.4);
 }
 
 @keyframes toastIn {

@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "Novo Personagem",
   "sidebar.characters": "Personagens",
+  "sidebar.search_characters": "Buscar personagens...",
   "sidebar.chat_history": "Histórico de Chat",
   "sidebar.disconnected": "Desconectado",
   "sidebar.connected": "Conectado ao Colab",
@@ -68,6 +69,7 @@
   "memory.empty_events": "Nenhum evento ainda",
   "memory.empty_summary": "Nenhum resumo ainda",
   "app.no_chars": "Nenhum personagem ainda.<br>Crie seu primeiro personagem! ✨",
+  "app.no_search_results": "Nenhum personagem corresponde à sua busca.",
   "app.confirm_delete_char": "Excluir este personagem e todos os seus chats e memórias?",
   "app.confirm_delete_chat": "Excluir este chat?",
   "toast.settings_saved": "Configurações salvas!",

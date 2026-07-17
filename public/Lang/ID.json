@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "Karakter Baru",
   "sidebar.characters": "Karakter",
+  "sidebar.search_characters": "Cari karakter...",
   "sidebar.chat_history": "Chat History",
   "sidebar.disconnected": "Disconnected",
   "sidebar.connected": "Connected to Colab",
@@ -68,6 +69,7 @@
   "memory.empty_events": "Belum ada event",
   "memory.empty_summary": "Belum ada ringkasan",
   "app.no_chars": "Belum ada karakter.<br>Buat karakter pertama mu! ✨",
+  "app.no_search_results": "Tidak ada karakter yang cocok dengan pencarian.",
   "app.confirm_delete_char": "Hapus karakter ini beserta semua chat dan memory?",
   "app.confirm_delete_chat": "Hapus chat ini?",
   "toast.settings_saved": "Settings saved!",

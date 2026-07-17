@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "شخصية جديدة",
   "sidebar.characters": "الشخصيات",
+  "sidebar.search_characters": "ابحث عن الشخصيات...",
   "sidebar.chat_history": "سجل الدردشة",
   "sidebar.disconnected": "غير متصل",
   "sidebar.connected": "متصل بـ Colab",
@@ -68,6 +69,7 @@
   "memory.empty_events": "لا توجد أحداث بعد",
   "memory.empty_summary": "لا توجد ملخصات بعد",
   "app.no_chars": "لا توجد شخصيات بعد.<br>قم بإنشاء شخصيتك الأولى! ✨",
+  "app.no_search_results": "لا توجد شخصيات تطابق بحثك.",
   "app.confirm_delete_char": "هل تريد حذف هذه الشخصية وكل دردشاتها وذكرياتها؟",
   "app.confirm_delete_chat": "هل تريد حذف هذه الدردشة؟",
   "toast.settings_saved": "تم حفظ الإعدادات!",

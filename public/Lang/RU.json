@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "Новый Персонаж",
   "sidebar.characters": "Персонажи",
+  "sidebar.search_characters": "Поиск персонажей...",
   "sidebar.chat_history": "История чата",
   "sidebar.disconnected": "Отключено",
   "sidebar.connected": "Подключено к Colab",
@@ -68,6 +69,7 @@
   "memory.empty_events": "Событий еще нет",
   "memory.empty_summary": "Сводок еще нет",
   "app.no_chars": "Персонажей пока нет.<br>Создайте своего первого персонажа! ✨",
+  "app.no_search_results": "Персонажи по вашему запросу не найдены.",
   "app.confirm_delete_char": "Удалить этого персонажа, а также все его чаты и память?",
   "app.confirm_delete_chat": "Удалить этот чат?",
   "toast.settings_saved": "Настройки сохранены!",

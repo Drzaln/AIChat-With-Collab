@@ -64,6 +64,13 @@ MODEL = "hf.co/mradermacher/EVA-abliterated-TIES-Qwen2.5-14B-i1-GGUF:Q6_K"
 OLLAMA_PORT = 11434
 PROXY_PORT  = 4000
 API_KEY     = "sk-colab-local"
+
+# 🧠 Context window (in tokens) for the Ollama model.
+# Ollama defaults to a small context (often 2048-4096) if this isn't set,
+# which silently truncates long chats/summarize requests instead of erroring —
+# raise this if you plan on long conversations or using "AI Summarize Chat".
+# T4 (16GB VRAM) can usually handle 8192 comfortably with a 14B Q6_K/IQ4_XS model.
+NUM_CTX     = 8192
 # ────────────────────────────────────────────────────────────
 
 
@@ -162,7 +169,7 @@ sh(f"ollama pull {MODEL}")
 
 # Alias ke nama pendek agar LiteLLM bisa referensikan dengan mudah
 with open("/tmp/Modelfile", "w") as f:
-    f.write(f"FROM {MODEL}\n")
+    f.write(f"FROM {MODEL}\nPARAMETER num_ctx {NUM_CTX}\n")
 result = sh("ollama create character -f /tmp/Modelfile", check=False, capture=True)
 if result.returncode == 0:
     print(f"\n  ✅ Model ready, aliased as 'character'")

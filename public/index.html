@@ -41,6 +41,21 @@
             </button>
 
             <div class="sidebar-section-title" data-i18n="sidebar.characters">Karakter</div>
+            <div class="sidebar-search">
+                <svg class="sidebar-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input type="text" id="character-search-input" class="sidebar-search-input"
+                    placeholder="Cari karakter…" data-i18n-placeholder="sidebar.search_characters"
+                    autocomplete="off">
+                <button class="sidebar-search-clear" id="btn-clear-char-search" title="Clear" style="display:none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
             <div id="character-list" class="character-list">
                 <!-- Populated by JS -->
             </div>

@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "नया चरित्र",
   "sidebar.characters": "चरित्र",
+  "sidebar.search_characters": "चरित्र खोजें...",
   "sidebar.chat_history": "चैट इतिहास",
   "sidebar.disconnected": "डिस्कनेक्ट हो गया",
   "sidebar.connected": "Colab से जुड़ा",
@@ -68,6 +69,7 @@
   "memory.empty_events": "अभी तक कोई घटना नहीं",
   "memory.empty_summary": "अभी तक कोई सारांश नहीं",
   "app.no_chars": "अभी तक कोई चरित्र नहीं।<br>अपना पहला चरित्र बनाएं! ✨",
+  "app.no_search_results": "आपकी खोज से कोई चरित्र मेल नहीं खाता।",
   "app.confirm_delete_char": "क्या आप इस चरित्र और इसके सभी चैट और यादों को हटाना चाहते हैं?",
   "app.confirm_delete_chat": "क्या इस चैट को हटाना चाहते हैं?",
   "toast.settings_saved": "सेटिंग सहेजी गई!",

@@ -12,7 +12,8 @@ let state = {
     chats: [],
     memory: null,
     sending: false,
-    config: {}
+    config: {},
+    characterSearchQuery: ''
 };
 
 window.langData = {};
@@ -161,6 +162,7 @@ async function loadCharacters() {
 
 function renderCharacterList() {
     const list = $('#character-list');
+
     if (state.characters.length === 0) {
         list.innerHTML = `
             <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
@@ -169,7 +171,20 @@ function renderCharacterList() {
         return;
     }
 
-    list.innerHTML = state.characters.map(c => `
+    const query = (state.characterSearchQuery || '').trim().toLowerCase();
+    const filtered = query
+        ? state.characters.filter(c => (c.name || '').toLowerCase().includes(query))
+        : state.characters;
+
+    if (filtered.length === 0) {
+        list.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+                ${t('app.no_search_results')}
+            </div>`;
+        return;
+    }
+
+    list.innerHTML = filtered.map(c => `
         <div class="character-item ${c.id === state.currentCharacterId ? 'active' : ''}"
              data-id="${c.id}" onclick="selectCharacter('${c.id}')">
             <div class="character-item-avatar">${getAvatarInnerHtml(c.avatar, c.name)}</div>
@@ -179,6 +194,26 @@ function renderCharacterList() {
             </div>
         </div>
     `).join('');
+}
+
+function searchCharacters(query) {
+    state.characterSearchQuery = query;
+    renderCharacterList();
+
+    const clearBtn = $('#btn-clear-char-search');
+    if (clearBtn) clearBtn.style.display = query ? 'flex' : 'none';
+}
+
+function clearCharacterSearch() {
+    const input = $('#character-search-input');
+    if (input) input.value = '';
+    searchCharacters('');
+}
+
+function clearCharacterSearchAndFocus() {
+    clearCharacterSearch();
+    const input = $('#character-search-input');
+    if (input) input.focus();
 }
 
 async function selectCharacter(id) {
@@ -256,6 +291,7 @@ async function saveCharacter() {
     }
 
     closeModal('modal-character');
+    clearCharacterSearch();
     await loadCharacters();
 
     if (state.currentCharacterId) {
@@ -824,7 +860,11 @@ async function summarizeMemory() {
         } else {
             state.memory = result.memory;
             renderMemory();
-            toast(t('toast.memory_summarized'), 'success');
+            if (result.warning) {
+                toast(result.warning, 'warning');
+            } else {
+                toast(t('toast.memory_summarized'), 'success');
+            }
         }
     } catch (err) {
         toast(`Error: ${err.message}`, 'error');
@@ -861,12 +901,13 @@ function toast(message, type = 'info') {
     el.textContent = message;
     document.body.appendChild(el);
 
+    const duration = Math.min(7000, Math.max(3000, message.length * 60));
     setTimeout(() => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(20px)';
         el.style.transition = 'all 0.3s ease';
         setTimeout(() => el.remove(), 300);
-    }, 3000);
+    }, duration);
 }
 
 function escapeHtml(text) {
@@ -979,6 +1020,10 @@ function bindEvents() {
     $('#btn-add-fact').addEventListener('click', addMemoryFact);
     $('#btn-add-pref').addEventListener('click', addMemoryPref);
     $('#btn-add-event').addEventListener('click', addMemoryEvent);
+
+    // Character search
+    $('#character-search-input').addEventListener('input', (e) => searchCharacters(e.target.value));
+    $('#btn-clear-char-search').addEventListener('click', clearCharacterSearchAndFocus);
 
     // Enter key in memory inputs
     $('#memory-new-fact').addEventListener('keydown', (e) => { if (e.key === 'Enter') addMemoryFact(); });

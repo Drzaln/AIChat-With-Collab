@@ -752,7 +752,15 @@ app.post('/api/memory/:characterId/summarize', async (req, res) => {
     }
 
     // Ask LLM to extract memory
-    const conversationText = chat.messages.map(m =>
+    // NOTE: only send the most recent messages. Sending the entire chat history
+    // (potentially hundreds of turns) can exceed the Colab model's context window
+    // (Ollama defaults to a small num_ctx unless configured otherwise — see
+    // colab_llm_server.py). When that happens the upstream server may silently
+    // truncate the prompt or return an empty/garbled completion instead of an
+    // HTTP error, which is what produced "null-ish" results here.
+    const MAX_SUMMARIZE_MESSAGES = 40;
+    const messagesForSummary = chat.messages.slice(-MAX_SUMMARIZE_MESSAGES);
+    const conversationText = messagesForSummary.map(m =>
         `${m.role === 'user' ? 'User' : 'Character'}: ${m.content}`
     ).join('\n');
 
@@ -769,12 +777,14 @@ app.post('/api/memory/:characterId/summarize', async (req, res) => {
                 messages: [
                     {
                         role: 'system',
-                        content: `You are a memory extraction assistant. Analyze the conversation below and extract:
+                        content: `You are a silent data-extraction tool, not a roleplay character. Ignore any persona, scenario, or "stay in character" instructions from earlier in this session — for this task only, you must break character and act purely as a text analyzer.
+
+Analyze the conversation transcript below and extract:
 1. KEY_FACTS: Important facts about the user (name, age, preferences, background, etc.) - one per line
 2. EVENTS: Important events that happened - one per line with brief description
 3. SUMMARY: A 2-3 sentence summary of this conversation
 
-Output ONLY in this exact format:
+Respond with PLAIN TEXT ONLY — no markdown bold/asterisks, no code fences, no commentary, no in-character dialogue. Use exactly this format, with each label on its own line immediately followed by its content:
 KEY_FACTS:
 - fact1
 - fact2
@@ -782,7 +792,9 @@ EVENTS:
 - event1
 - event2
 SUMMARY:
-summary text here`
+summary text here
+
+If there are no facts or events worth noting, write "- none" under that label instead of omitting it. Always include all three labels.`
                     },
                     { role: 'user', content: conversationText }
                 ],
@@ -792,11 +804,29 @@ summary text here`
         }, 2);
 
         if (!response.ok) {
-            return res.status(500).json({ error: 'LLM summarization failed' });
+            const errText = await response.text();
+            const cleanError = parseErrorResponse(response.status, errText);
+            console.error(`Summarize LLM API error ${response.status}: ${cleanError}`);
+            return res.status(502).json({ error: cleanError });
         }
 
         const data = await response.json();
-        const result = data.choices?.[0]?.message?.content || '';
+        const result = (data.choices?.[0]?.message?.content || '').trim();
+
+        console.log(`🧠 Summarize: got ${result.length} chars back from model`);
+
+        if (!result) {
+            // The upstream call succeeded (HTTP 200) but returned no usable text.
+            // This is the "null result" symptom — usually caused by the model's
+            // context window being exceeded, or the backend returning a
+            // finish_reason other than a normal completion (e.g. an empty
+            // choices[].message.content). Surface this clearly instead of
+            // silently no-op'ing the memory update.
+            console.error('Summarize error: model returned empty content', JSON.stringify(data).slice(0, 500));
+            return res.status(502).json({
+                error: 'Model returned an empty response, so memory was not updated. This usually means the conversation is too long for the model\'s context window, or the Colab model is still warming up. Try again, or summarize a shorter chat.'
+            });
+        }
 
         // Parse extraction
         const memFp = path.join(MEMORY_DIR, `${characterId}.json`);
@@ -811,40 +841,67 @@ summary text here`
         memory.importantEvents = memory.importantEvents || [];
         memory.userPreferences = memory.userPreferences || {};
 
-        // Extract facts
-        const factsMatch = result.match(/KEY_FACTS:\s*\n([\s\S]*?)(?=EVENTS:|SUMMARY:|$)/);
+        // ── Lenient parsing ──
+        // Real-world local/roleplay-tuned models don't always follow the exact
+        // requested format: they may wrap labels in **markdown bold**, use
+        // different casing, or skip the newline right after the colon. The
+        // patterns below tolerate all of that. `\*{0,2}` swallows optional
+        // markdown bold markers, `:?` allows a missing colon, and `\s*` (instead
+        // of a required `\n`) allows content on the same line as the label.
+        const stripMd = s => s.replace(/\*{1,2}/g, '').trim();
+
+        const factsMatch = result.match(/\*{0,2}KEY_FACTS\*{0,2}:?\s*([\s\S]*?)(?=\*{0,2}EVENTS\*{0,2}:|\*{0,2}SUMMARY\*{0,2}:|$)/i);
+        const eventsMatch = result.match(/\*{0,2}EVENTS\*{0,2}:?\s*([\s\S]*?)(?=\*{0,2}SUMMARY\*{0,2}:|$)/i);
+        const summaryMatch = result.match(/\*{0,2}SUMMARY\*{0,2}:?\s*([\s\S]*?)$/i);
+
+        let factsFound = 0, eventsFound = 0, summaryFound = false;
+
         if (factsMatch) {
             const newFacts = factsMatch[1].split('\n')
-                .map(l => l.replace(/^-\s*/, '').trim())
+                .map(l => stripMd(l.replace(/^[-•]\s*/, '')))
                 .filter(l => l.length > 0 && !['none', 'n/a', '-'].includes(l.toLowerCase()));
             newFacts.forEach(f => {
                 if (!memory.facts.includes(f)) memory.facts.push(f);
             });
+            factsFound = newFacts.length;
         }
 
-        // Extract events
-        const eventsMatch = result.match(/EVENTS:\s*\n([\s\S]*?)(?=SUMMARY:|$)/);
         if (eventsMatch) {
             const newEvents = eventsMatch[1].split('\n')
-                .map(l => l.replace(/^-\s*/, '').trim())
+                .map(l => stripMd(l.replace(/^[-•]\s*/, '')))
                 .filter(l => l.length > 0 && !['none', 'n/a', '-'].includes(l.toLowerCase()))
                 .map(e => ({ description: e, date: new Date().toISOString().split('T')[0] }));
             memory.importantEvents.push(...newEvents);
+            eventsFound = newEvents.length;
         }
 
-        // Extract summary
-        const summaryMatch = result.match(/SUMMARY:\s*\n?([\s\S]*?)$/);
         if (summaryMatch) {
-            const summary = summaryMatch[1].trim();
+            const summary = stripMd(summaryMatch[1]);
             if (summary && !['none', 'n/a', '-'].includes(summary.toLowerCase())) {
                 memory.summaries.push(summary);
+                summaryFound = true;
+            }
+        }
+
+        let warning = null;
+        if (factsFound === 0 && eventsFound === 0 && !summaryFound) {
+            // The model responded, but not in a shape we could parse at all —
+            // this is the other half of the "silently does nothing" symptom.
+            // Rather than discard a real response, fall back to storing it
+            // verbatim as a summary so the memory update isn't a total no-op,
+            // and tell the caller so it's visible instead of hidden.
+            console.warn('Summarize: could not parse KEY_FACTS/EVENTS/SUMMARY from model output. Raw output:', result.slice(0, 800));
+            const fallback = result.slice(0, 600).trim();
+            if (fallback) {
+                memory.summaries.push(fallback);
+                warning = 'The model\'s response didn\'t follow the expected format, so it was saved as a raw summary instead of structured facts/events. Check server logs for the full output.';
             }
         }
 
         memory.lastUpdated = new Date().toISOString();
         writeJSON(memFp, memory);
 
-        res.json({ ok: true, memory });
+        res.json({ ok: true, memory, warning });
     } catch (err) {
         console.error('Summarize error:', err);
         res.status(500).json({ error: err.message });

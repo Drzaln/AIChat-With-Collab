@@ -1,6 +1,7 @@
 {
   "sidebar.new_character": "新しいキャラクター",
   "sidebar.characters": "キャラクター",
+  "sidebar.search_characters": "キャラクターを検索...",
   "sidebar.chat_history": "チャット履歴",
   "sidebar.disconnected": "切断されました",
   "sidebar.connected": "Colabに接続済み",
@@ -68,6 +69,7 @@
   "memory.empty_events": "イベントはまだありません",
   "memory.empty_summary": "要約はまだありません",
   "app.no_chars": "キャラクターはまだいません。<br>最初のキャラクターを作成しましょう！✨",
+  "app.no_search_results": "検索に一致するキャラクターがありません。",
   "app.confirm_delete_char": "このキャラクターとすべてのチャット、メモリを削除しますか？",
   "app.confirm_delete_chat": "このチャットを削除しますか？",
   "toast.settings_saved": "設定を保存しました！",
