@@ -6,49 +6,49 @@
 /* ── CSS Custom Properties ─────────────────────────────── */
 :root {
     /* Base palette */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-tertiary: #1a1a28;
-    --bg-elevated: #1e1e2e;
-    --bg-hover: #252538;
+    --bg-primary: #121212;
+    --bg-secondary: #191A1F;
+    --bg-tertiary: #1E1F26;
+    --bg-elevated: #262832;
+    --bg-hover: #2E303A;
 
     /* Accent colors */
-    --accent-primary: #7c5cfc;
-    --accent-primary-glow: rgba(124, 92, 252, 0.25);
-    --accent-secondary: #c084fc;
-    --accent-gradient: linear-gradient(135deg, #7c5cfc 0%, #c084fc 50%, #f472b6 100%);
-    --accent-gradient-hover: linear-gradient(135deg, #8b6ffd 0%, #c994fd 50%, #f58ec5 100%);
+    --accent-primary: #A855F7;
+    --accent-primary-glow: rgba(168, 85, 247, 0.25);
+    --accent-secondary: #EC4899;
+    --accent-gradient: linear-gradient(135deg, #9333EA 0%, #EC4899 100%);
+    --accent-gradient-hover: linear-gradient(135deg, #A855F7 0%, #F472B6 100%);
 
     /* Text */
-    --text-primary: #e8e6f0;
-    --text-secondary: #9895a8;
-    --text-muted: #625f70;
-    --text-accent: #c084fc;
+    --text-primary: #E8E6E3;
+    --text-secondary: #A3A3AD;
+    --text-muted: #6B6C76;
+    --text-accent: #A855F7;
 
     /* Borders */
-    --border-color: rgba(255, 255, 255, 0.06);
-    --border-hover: rgba(255, 255, 255, 0.12);
-    --border-accent: rgba(124, 92, 252, 0.4);
+    --border-color: #2E303A;
+    --border-hover: #3A3D49;
+    --border-accent: rgba(168, 85, 247, 0.4);
 
     /* Glass */
-    --glass-bg: rgba(18, 18, 26, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(25, 26, 31, 0.85);
+    --glass-border: rgba(232, 230, 227, 0.08);
 
     /* Status */
-    --success: #34d399;
-    --warning: #fbbf24;
-    --danger: #f87171;
+    --success: #34D399;
+    --warning: #FBBF24;
+    --danger: #F87171;
     --danger-bg: rgba(248, 113, 113, 0.1);
 
     /* Chat bubbles */
-    --bubble-user: linear-gradient(135deg, #7c5cfc 0%, #6d4de8 100%);
-    --bubble-assistant: #1e1e2e;
+    --bubble-user: linear-gradient(135deg, #9333EA 0%, #EC4899 100%);
+    --bubble-assistant: #1E1F26;
 
     /* Shadows */
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 20px rgba(124, 92, 252, 0.2);
+    --shadow-glow: 0 0 20px rgba(168, 85, 247, 0.2);
 
     /* Sizing */
     --sidebar-width: 300px;
@@ -1608,7 +1608,8 @@ select.form-input {
     flex-shrink: 0;
 }
 
-.chat-item:hover .chat-item-actions {
+.chat-item:hover .chat-item-actions,
+.chat-item.active .chat-item-actions {
     opacity: 1;
 }
 
