@@ -4,3 +4,5 @@ data/chats/*
 data/memory/*
 package-lock.json
 karakter.json
+data/characters/562d4ca2-023f-46ee-ace6-acb4f47f11b0.json
+update_memory.js
