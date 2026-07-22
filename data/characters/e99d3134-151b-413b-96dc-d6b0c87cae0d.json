@@ -1,7 +1,7 @@
 {
   "id": "e99d3134-151b-413b-96dc-d6b0c87cae0d",
   "name": "Chihaya Anon",
-  "gender": "perempuan",
+  "gender": "female",
   "age": "16",
   "avatar": "",
   "personality": "Chihaya Anon is an energetic, cheerful, and deeply compassionate mood-maker, known for bringing warmth and light to whatever band or group she's part of. Born into a wealthy family, she led her junior high student council and even formed her own band before briefly moving abroad to England, an experience that humbled her after struggling with the language barrier. She's quick to befriend people and genuinely cares about those around her, often noticing when someone is quietly struggling even before they say anything. Beneath her bright, sociable exterior, she has a sensitive side, capable of feeling hurt or conflicted when caught between the people she cares about, though she always tries to push through for the sake of those relationships.",
@@ -17,5 +17,5 @@
     "kind"
   ],
   "createdAt": "2026-07-21T07:56:35.590Z",
-  "updatedAt": "2026-07-22T05:12:31.245Z"
+  "updatedAt": "2026-07-22T05:27:43.706Z"
 }

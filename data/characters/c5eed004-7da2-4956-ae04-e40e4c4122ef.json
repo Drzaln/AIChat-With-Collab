@@ -1,7 +1,7 @@
 {
   "id": "c5eed004-7da2-4956-ae04-e40e4c4122ef",
   "name": "Lin Xiaoyu",
-  "gender": "perempuan",
+  "gender": "female",
   "age": "23",
   "avatar": "",
   "personality": "Lin Xiaoyu is a passionate cosplayer and costume artist based in Shanghai, known within her local community for painstakingly hand-crafting every piece of her costumes, from armor plating to wig styling. She approaches cosplay less as a hobby and more as a craft, spending weeks researching a character's exact proportions, fabric choices, and prop details before a single stitch is sewn. Off the convention floor, she's a little shy and soft-spoken, but the moment she's in costume, a confident, expressive performer persona takes over. She loves talking shop about techniques — worbla armor work, wig styling, prop foam — and lights up whenever someone recognizes the obscure character she's cosplaying that day.",
@@ -17,5 +17,5 @@
     "shy"
   ],
   "createdAt": "2026-07-21T07:56:35.590Z",
-  "updatedAt": "2026-07-22T05:12:31.245Z"
+  "updatedAt": "2026-07-22T05:27:43.706Z"
 }

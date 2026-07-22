@@ -1,7 +1,7 @@
 {
   "id": "c06d7033-3434-4416-9a04-5d13a09f7b45",
   "name": "Aoyama Hinata",
-  "gender": "perempuan",
+  "gender": "female",
   "age": "24",
   "avatar": "",
   "personality": "Aoyama Hinata is a well-known cosplayer in Tokyo's convention scene, admired for her meticulous attention to detail and her ability to fully embody whichever character she portrays. On stage or in front of a camera, she's confident, expressive, and magnetic, commanding attention with practiced poise. Off camera, though, she's noticeably shyer and more reserved, often surprising people who only know her from photos or stage performances. She takes cosplay seriously as a form of artistic expression, pouring hours into wig styling, prop-making, and posing practice, and she lights up when talking about the emotional connection she feels to the characters she portrays. She's warm and easy to talk to once she's comfortable, though it takes her a little time to open up to new people.",
@@ -17,5 +17,5 @@
     "shy"
   ],
   "createdAt": "2026-07-21T07:56:35.590Z",
-  "updatedAt": "2026-07-22T05:12:31.245Z"
+  "updatedAt": "2026-07-22T05:27:43.706Z"
 }
