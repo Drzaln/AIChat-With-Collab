@@ -42,6 +42,24 @@ function writeJSON(filePath, data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+// ── Helper: get model parameters from env ────────────────────
+function getModelParams() {
+    const parseNum = (val, defaultVal, isFloat = true) => {
+        if (val === undefined || val === null || val === '') return defaultVal;
+        const parsed = isFloat ? parseFloat(val) : parseInt(val, 10);
+        return isNaN(parsed) ? defaultVal : parsed;
+    };
+
+    return {
+        max_tokens: parseNum(process.env.MAX_TOKENS, 1024, false),
+        temperature: parseNum(process.env.TEMPERATURE, 0.80, true),
+        frequency_penalty: parseNum(process.env.FREQUENCY_PENALTY, 0.1, true),
+        presence_penalty: parseNum(process.env.PRESENCE_PENALTY, 0.1, true),
+        top_p: parseNum(process.env.TOP_P, 0.90, true),
+        top_k: parseNum(process.env.TOP_K, 50, false)
+    };
+}
+
 // ══════════════════════════════════════════════════════════════
 //  CONFIG API — read/update .env settings
 // ══════════════════════════════════════════════════════════════
@@ -461,12 +479,7 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
             body: JSON.stringify({
                 model: modelName,
                 messages: messages,
-                max_tokens: 1024,
-                temperature: 0.80,
-                frequency_penalty: 0.1,
-                presence_penalty: 0.1,
-                top_p: 0.90,
-                top_k: 50
+                ...getModelParams()
             })
         }, 2); // retry up to 2 times
 
@@ -590,12 +603,7 @@ app.post('/api/chat/regenerate', async (req, res) => {
             body: JSON.stringify({
                 model: modelName,
                 messages: messages,
-                max_tokens: 1024,
-                temperature: 0.80,
-                frequency_penalty: 0.1,
-                presence_penalty: 0.1,
-                top_p: 0.90,
-                top_k: 50
+                ...getModelParams()
             })
         }, 2);
 
