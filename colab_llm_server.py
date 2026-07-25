@@ -52,8 +52,12 @@ import subprocess, time, os, re, requests
 
 #MODEL = "hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:IQ4_XS"
 #MODEL = "hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:Q6_K"
+
 #MODEL = "hf.co/bartowski/nbeerbower_Dumpling-Qwen2.5-14B-GGUF:Q6_K"
-MODEL = "hf.co/mradermacher/EVA-abliterated-TIES-Qwen2.5-14B-i1-GGUF:Q6_K"
+#MODEL = "hf.co/mradermacher/EVA-abliterated-TIES-Qwen2.5-14B-i1-GGUF:Q6_K"
+
+#MODEL = "hf.co/bartowski/EVA-Qwen2.5-14B-v0.2-GGUF:Q6_K" #12.12GB
+MODEL = "hf.co/mradermacher/EVA-Qwen2.5-14B-v0.2-i1-GGUF:Q6_K" #12.2GB
 
 # f948 Qwen3 generasi terbaru, reasoning lebih baik
 # MODEL = "hf.co/richardyoung/Qwen3-14B-abliterated-GGUF:Q6_K"
