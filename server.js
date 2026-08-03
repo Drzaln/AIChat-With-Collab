@@ -969,12 +969,12 @@ async function pinterestSearch(query) {
     if (cached && cached.expires > Date.now()) return cached.data;
 
     const url = `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`;
-    
+
     const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) {
         throw new Error(`API returned ${response.status}`);
     }
-    
+
     const data = await response.json();
 
     if (!data.status || !data.data || data.data.length === 0) {
@@ -999,7 +999,7 @@ app.get('/api/pinterest/search', async (req, res) => {
 
     try {
         const images = await pinterestSearch(query);
-        res.json({ success: true, data: images.slice(0, 25) }); // Ambil 25 gambar seperti sebelumnya
+        res.json({ success: true, data: images.slice(0, 50) }); // Ambil 25 gambar seperti sebelumnya
     } catch (err) {
         console.error('Pinterest search error:', err.message);
         res.status(502).json({ success: false, error: err.message || 'Gagal mengambil data dari Pinterest. Coba lagi nanti.' });
