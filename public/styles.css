@@ -1573,6 +1573,109 @@ select.form-input {
     background: #ef4444;
 }
 
+.avatar-pinterest-toggle {
+    margin-top: 8px;
+    width: 100%;
+    padding: 5px 6px;
+    font-size: 0.7rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.avatar-pinterest-toggle:hover,
+.avatar-pinterest-toggle.active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* ═══ PINTEREST AVATAR PICKER ═══ */
+.pinterest-panel {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+}
+
+.pinterest-search-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pinterest-search-row .form-input {
+    flex: 1;
+    min-width: 140px;
+}
+
+.pinterest-search-row .btn-secondary {
+    flex-shrink: 0;
+}
+
+.pinterest-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.pinterest-thumb-wrap {
+    width: 160px;
+    height: 160px;
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pinterest-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.pinterest-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pinterest-counter {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    min-width: 56px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.pinterest-use-btn {
+    width: 100%;
+    max-width: 260px;
+}
+
+@media (max-width: 768px) {
+    .avatar-upload-group {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .avatar-pinterest-toggle {
+        max-width: 200px;
+    }
+}
+
 /* Avatar in character list (image support) */
 .character-item-avatar img {
     width: 100%;

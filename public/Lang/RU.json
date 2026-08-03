@@ -86,5 +86,14 @@
   "btn.cancel": "Отмена",
   "env.warning_title": "⚠️ Предупреждение о настройках языка",
   "env.warning_desc": "Язык, указанный в .env, не поддерживается или отсутствует. Система использует английский (EN) по умолчанию.",
-  "env.warning_btn": "Понятно"
+  "env.warning_btn": "Понятно",
+  "char_edit.avatar_remove": "Удалить аватар",
+  "char_edit.pinterest_toggle_title": "Искать в Pinterest",
+  "char_edit.pinterest_toggle": "🔎 Поиск",
+  "char_edit.pinterest_title": "🔎 Искать аватар в Pinterest",
+  "char_edit.pinterest_placeholder": "Ключевое слово...",
+  "char_edit.pinterest_search": "Поиск",
+  "char_edit.pinterest_prev": "Назад",
+  "char_edit.pinterest_next": "Вперед",
+  "char_edit.pinterest_use": "Использовать это изображение"
 }

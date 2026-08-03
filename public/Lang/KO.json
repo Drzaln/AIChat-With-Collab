@@ -86,5 +86,14 @@
   "btn.cancel": "취소",
   "env.warning_title": "⚠️ 언어 설정 경고",
   "env.warning_desc": ".env에 설정된 언어가 지원되지 않거나 누락되었습니다. 시스템이 영어를 기본값으로 사용합니다.",
-  "env.warning_btn": "확인"
+  "env.warning_btn": "확인",
+  "char_edit.avatar_remove": "아바타 삭제",
+  "char_edit.pinterest_toggle_title": "Pinterest에서 검색",
+  "char_edit.pinterest_toggle": "🔎 검색",
+  "char_edit.pinterest_title": "🔎 Pinterest에서 아바타 검색",
+  "char_edit.pinterest_placeholder": "검색어...",
+  "char_edit.pinterest_search": "검색",
+  "char_edit.pinterest_prev": "이전",
+  "char_edit.pinterest_next": "다음",
+  "char_edit.pinterest_use": "이 이미지 사용"
 }

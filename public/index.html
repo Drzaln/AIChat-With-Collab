@@ -280,10 +280,31 @@
                                 </svg>
                                 <span data-i18n="char_edit.avatar_upload">Upload</span>
                             </div>
-                            <button type="button" class="avatar-remove-btn" id="avatar-remove-btn" style="display:none" title="Hapus avatar">✕</button>
+                            <button type="button" class="avatar-remove-btn" id="avatar-remove-btn" style="display:none" title="Hapus avatar" data-i18n-title="char_edit.avatar_remove">✕</button>
                         </div>
                         <input type="hidden" id="char-avatar">
+                        <button type="button" class="avatar-pinterest-toggle" id="avatar-pinterest-toggle" title="Cari dari Pinterest" data-i18n-title="char_edit.pinterest_toggle_title" data-i18n="char_edit.pinterest_toggle">🔎 Cari</button>
                     </div>
+                </div>
+
+                <div class="form-group pinterest-panel" id="pinterest-panel" style="display:none">
+                    <label data-i18n="char_edit.pinterest_title">🔎 Cari Avatar dari Pinterest</label>
+                    <div class="pinterest-search-row">
+                        <input type="text" id="pinterest-query" class="form-input" placeholder="Kata kunci pencarian..." data-i18n-placeholder="char_edit.pinterest_placeholder">
+                        <button type="button" class="btn-secondary" id="pinterest-search-btn" data-i18n="char_edit.pinterest_search">Cari</button>
+                    </div>
+                    <div class="pinterest-results" id="pinterest-results" style="display:none">
+                        <div class="pinterest-thumb-wrap">
+                            <img id="pinterest-thumb" class="pinterest-thumb" alt="Preview">
+                        </div>
+                        <div class="pinterest-nav">
+                            <button type="button" class="btn-icon" id="pinterest-prev-btn" title="Sebelumnya" data-i18n-title="char_edit.pinterest_prev">‹</button>
+                            <span class="pinterest-counter" id="pinterest-counter">1 / 1</span>
+                            <button type="button" class="btn-icon" id="pinterest-next-btn" title="Selanjutnya" data-i18n-title="char_edit.pinterest_next">›</button>
+                        </div>
+                        <button type="button" class="btn-primary pinterest-use-btn" id="pinterest-use-btn" data-i18n="char_edit.pinterest_use">Gunakan Gambar Ini</button>
+                    </div>
+                    <span class="form-hint" id="pinterest-status"></span>
                 </div>
 
                 <div class="form-group">

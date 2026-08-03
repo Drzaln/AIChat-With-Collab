@@ -86,5 +86,14 @@
   "btn.cancel": "रद्द करें",
   "env.warning_title": "⚠️ भाषा कॉन्फ़िगरेशन चेतावनी",
   "env.warning_desc": ".env में सेट की गई भाषा असमर्थित है या गायब है। सिस्टम डिफ़ॉल्ट रूप से अंग्रेज़ी (EN) का उपयोग कर रहा है।",
-  "env.warning_btn": "समझ गया"
+  "env.warning_btn": "समझ गया",
+  "char_edit.avatar_remove": "अवतार हटाएं",
+  "char_edit.pinterest_toggle_title": "Pinterest से खोजें",
+  "char_edit.pinterest_toggle": "🔎 खोजें",
+  "char_edit.pinterest_title": "🔎 Pinterest से अवतार खोजें",
+  "char_edit.pinterest_placeholder": "खोज कीवर्ड...",
+  "char_edit.pinterest_search": "खोजें",
+  "char_edit.pinterest_prev": "पिछला",
+  "char_edit.pinterest_next": "अगला",
+  "char_edit.pinterest_use": "इस छवि का उपयोग करें"
 }

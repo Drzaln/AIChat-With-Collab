@@ -86,5 +86,14 @@
   "btn.cancel": "إلغاء",
   "env.warning_title": "⚠️ تحذير تكوين اللغة",
   "env.warning_desc": "اللغة المحددة في .env غير مدعومة أو مفقودة. يستخدم النظام اللغة الإنجليزية (EN) كإعداد افتراضي.",
-  "env.warning_btn": "مفهوم"
+  "env.warning_btn": "مفهوم",
+  "char_edit.avatar_remove": "إزالة الصورة الرمزية",
+  "char_edit.pinterest_toggle_title": "البحث من بينتريست",
+  "char_edit.pinterest_toggle": "🔎 بحث",
+  "char_edit.pinterest_title": "🔎 البحث عن صورة رمزية من بينتريست",
+  "char_edit.pinterest_placeholder": "كلمة البحث...",
+  "char_edit.pinterest_search": "بحث",
+  "char_edit.pinterest_prev": "السابق",
+  "char_edit.pinterest_next": "التالي",
+  "char_edit.pinterest_use": "استخدم هذه الصورة"
 }

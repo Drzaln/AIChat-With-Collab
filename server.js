@@ -949,6 +949,84 @@ app.get('/api/test-connection', async (req, res) => {
     }
 });
 
+// ══════════════════════════════════════════════════════════════
+//  PINTEREST AVATAR SEARCH — server-side proxy for the
+//  character avatar picker (Prev/Next browsing, no randomness)
+// ══════════════════════════════════════════════════════════════
+const pinterestCache = new Map(); // "query" -> { data, expires }
+const PINTEREST_CACHE_TTL_MS = 15 * 60 * 1000; // reuse results for 15 min
+
+const PINTEREST_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/javascript, */*; q=0.01',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'X-Requested-With': 'XMLHttpRequest'
+};
+
+async function pinterestSearch(query) {
+    const cacheKey = query.toLowerCase();
+    const cached = pinterestCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return cached.data;
+
+    const url = `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`;
+    
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+
+    if (!data.status || !data.data || data.data.length === 0) {
+        throw new Error('Tidak ditemukan hasil gambar.');
+    }
+
+    const results = data.data.map(item => ({
+        id: item.id || Math.random().toString(36).substring(2, 10),
+        url: item.image_url,
+        thumb: item.image_url,
+        width: 500,
+        height: 500
+    })).filter(item => item.url);
+
+    pinterestCache.set(cacheKey, { data: results, expires: Date.now() + PINTEREST_CACHE_TTL_MS });
+    return results;
+}
+
+app.get('/api/pinterest/search', async (req, res) => {
+    const query = (req.query.q || '').toString().trim();
+    if (!query) return res.status(400).json({ success: false, error: 'Query kosong' });
+
+    try {
+        const images = await pinterestSearch(query);
+        res.json({ success: true, data: images.slice(0, 25) }); // Ambil 25 gambar seperti sebelumnya
+    } catch (err) {
+        console.error('Pinterest search error:', err.message);
+        res.status(502).json({ success: false, error: err.message || 'Gagal mengambil data dari Pinterest. Coba lagi nanti.' });
+    }
+});
+
+// Streams the actual pixels through our server so the browser <canvas>
+// can read/resize them without hitting cross-origin issues.
+app.get('/api/pinterest/image', async (req, res) => {
+    const imgUrl = (req.query.url || '').toString();
+    if (!imgUrl || !imgUrl.startsWith('http')) {
+        return res.status(400).json({ error: 'URL tidak valid' });
+    }
+    try {
+        const response = await fetch(imgUrl, {
+            headers: { 'User-Agent': PINTEREST_HEADERS['User-Agent'], 'Referer': 'https://www.pinterest.com/' },
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!response.ok) return res.status(502).json({ error: 'Gagal mengunduh gambar' });
+        res.set('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(Buffer.from(await response.arrayBuffer()));
+    } catch (err) {
+        res.status(502).json({ error: 'Gagal mengunduh gambar' });
+    }
+});
+
 // ── SPA fallback ────────────────────────────────────────────
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

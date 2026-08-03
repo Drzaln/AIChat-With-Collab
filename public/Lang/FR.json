@@ -86,5 +86,14 @@
   "btn.cancel": "Annuler",
   "env.warning_title": "⚠️ Avertissement de configuration de la langue",
   "env.warning_desc": "La langue définie dans .env n'est pas prise en charge ou est manquante. Le système utilise l'anglais (EN) par défaut.",
-  "env.warning_btn": "Compris"
+  "env.warning_btn": "Compris",
+  "char_edit.avatar_remove": "Supprimer l'avatar",
+  "char_edit.pinterest_toggle_title": "Rechercher sur Pinterest",
+  "char_edit.pinterest_toggle": "🔎 Rechercher",
+  "char_edit.pinterest_title": "🔎 Rechercher un avatar sur Pinterest",
+  "char_edit.pinterest_placeholder": "Mot-clé...",
+  "char_edit.pinterest_search": "Rechercher",
+  "char_edit.pinterest_prev": "Précédent",
+  "char_edit.pinterest_next": "Suivant",
+  "char_edit.pinterest_use": "Utiliser cette image"
 }

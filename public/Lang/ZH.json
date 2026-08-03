@@ -86,5 +86,14 @@
   "btn.cancel": "取消",
   "env.warning_title": "⚠️ 语言配置警告",
   "env.warning_desc": ".env 中设置的语言不受支持或缺失。系统默认使用英语 (EN)。",
-  "env.warning_btn": "明白"
+  "env.warning_btn": "明白",
+  "char_edit.avatar_remove": "删除头像",
+  "char_edit.pinterest_toggle_title": "从Pinterest搜索",
+  "char_edit.pinterest_toggle": "🔎 搜索",
+  "char_edit.pinterest_title": "🔎 从Pinterest搜索头像",
+  "char_edit.pinterest_placeholder": "搜索关键字...",
+  "char_edit.pinterest_search": "搜索",
+  "char_edit.pinterest_prev": "上一个",
+  "char_edit.pinterest_next": "下一个",
+  "char_edit.pinterest_use": "使用此图片"
 }

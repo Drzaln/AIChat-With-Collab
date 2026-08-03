@@ -13,7 +13,8 @@ let state = {
     memory: null,
     sending: false,
     config: {},
-    characterSearchQuery: ''
+    characterSearchQuery: '',
+    pinterest: { results: [], index: 0, loading: false }
 };
 
 window.langData = {};
@@ -264,6 +265,14 @@ function openCharacterEditor(editId = null) {
     $('#char-example').value = char ? (char.exampleDialogue || '') : '';
     $('#char-system').value = char ? (char.systemPrompt || '') : '';
     $('#btn-delete-character').style.display = char ? 'flex' : 'none';
+
+    // Reset the Pinterest picker for this editing session
+    state.pinterest = { results: [], index: 0, loading: false };
+    $('#pinterest-panel').style.display = 'none';
+    $('#pinterest-results').style.display = 'none';
+    $('#pinterest-status').textContent = '';
+    $('#pinterest-query').value = char ? (char.name || '') : '';
+    $('#avatar-pinterest-toggle').classList.remove('active');
 
     openModal('modal-character');
     closeSidebarOnMobile();
@@ -989,6 +998,16 @@ function bindEvents() {
         e.stopPropagation();
         removeAvatar();
     });
+
+    // Pinterest avatar picker
+    $('#avatar-pinterest-toggle').addEventListener('click', togglePinterestPanel);
+    $('#pinterest-search-btn').addEventListener('click', searchPinterest);
+    $('#pinterest-query').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); searchPinterest(); }
+    });
+    $('#pinterest-prev-btn').addEventListener('click', () => stepPinterestResult(-1));
+    $('#pinterest-next-btn').addEventListener('click', () => stepPinterestResult(1));
+    $('#pinterest-use-btn').addEventListener('click', usePinterestImage);
     $('#btn-edit-character').addEventListener('click', () => {
         if (state.currentCharacterId) openCharacterEditor(state.currentCharacterId);
     });
@@ -1133,6 +1152,136 @@ function removeAvatar() {
     $('#char-avatar').value = '';
     $('#char-avatar-file').value = '';
     updateAvatarPreview('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  PINTEREST AVATAR PICKER
+//  Sequential Prev/Next browsing through search results —
+//  never random, so a missed image can always be revisited.
+// ══════════════════════════════════════════════════════════
+
+function togglePinterestPanel() {
+    const panel = $('#pinterest-panel');
+    const btn = $('#avatar-pinterest-toggle');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    btn.classList.toggle('active', !isOpen);
+    if (!isOpen) {
+        setTimeout(() => $('#pinterest-query').focus(), 50);
+    }
+}
+
+async function searchPinterest() {
+    const query = $('#pinterest-query').value.trim();
+    const statusEl = $('#pinterest-status');
+    const resultsEl = $('#pinterest-results');
+
+    if (!query) {
+        statusEl.textContent = 'Masukkan kata kunci pencarian dulu ya.';
+        return;
+    }
+    if (state.pinterest.loading) return;
+
+    state.pinterest.loading = true;
+    resultsEl.style.display = 'none';
+    statusEl.textContent = 'Mencari gambar...';
+
+    try {
+        const res = await api('GET', `/api/pinterest/search?q=${encodeURIComponent(query)}`);
+        if (!res.success) {
+            statusEl.textContent = res.error || 'Gagal mencari gambar.';
+            state.pinterest.results = [];
+            return;
+        }
+        if (!res.data || res.data.length === 0) {
+            statusEl.textContent = `Tidak ada gambar ditemukan untuk "${query}".`;
+            state.pinterest.results = [];
+            return;
+        }
+        state.pinterest.results = res.data;
+        state.pinterest.index = 0;
+        statusEl.textContent = '';
+        resultsEl.style.display = 'flex';
+        renderPinterestResult();
+    } catch (err) {
+        statusEl.textContent = 'Terjadi kesalahan saat menghubungi server.';
+    } finally {
+        state.pinterest.loading = false;
+    }
+}
+
+function renderPinterestResult() {
+    const { results, index } = state.pinterest;
+    if (!results.length) return;
+    const item = results[index];
+    $('#pinterest-thumb').src = `/api/pinterest/image?url=${encodeURIComponent(item.thumb)}`;
+    $('#pinterest-counter').textContent = `${index + 1} / ${results.length}`;
+}
+
+function stepPinterestResult(direction) {
+    const { results } = state.pinterest;
+    if (!results.length) return;
+    // Clamp instead of wrapping so Prev/Next always moves one-by-one
+    // and stops cleanly at the first/last image.
+    state.pinterest.index = Math.max(0, Math.min(results.length - 1, state.pinterest.index + direction));
+    renderPinterestResult();
+}
+
+async function usePinterestImage() {
+    const { results, index } = state.pinterest;
+    if (!results.length) return;
+    const item = results[index];
+    const statusEl = $('#pinterest-status');
+    const useBtn = $('#pinterest-use-btn');
+
+    useBtn.disabled = true;
+    statusEl.textContent = 'Mengunduh gambar...';
+
+    try {
+        const proxyUrl = `/api/pinterest/image?url=${encodeURIComponent(item.url)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('download failed');
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        const resizedDataUrl = await resizeImageDataUrl(dataUrl, 256);
+        $('#char-avatar').value = resizedDataUrl;
+        updateAvatarPreview(resizedDataUrl);
+        statusEl.textContent = '✅ Avatar terpasang dari Pinterest.';
+        togglePinterestPanel();
+    } catch (err) {
+        statusEl.textContent = 'Gagal menggunakan gambar ini, coba gambar lain.';
+    } finally {
+        useBtn.disabled = false;
+    }
+}
+
+// Shared resize helper: mirrors the sizing/quality used by manual upload
+function resizeImageDataUrl(srcDataUrl, maxSize) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+            } else {
+                if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/webp', 0.85));
+        };
+        img.onerror = reject;
+        img.src = srcDataUrl;
+    });
 }
 
 // ══════════════════════════════════════════════════════════

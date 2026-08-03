@@ -86,5 +86,14 @@
   "btn.cancel": "Batal",
   "env.warning_title": "⚠️ Peringatan Konfigurasi Bahasa",
   "env.warning_desc": "Bahasa yang Anda atur di .env tidak didukung atau kosong. Sistem menggunakan bahasa Inggris (EN) sebagai default.",
-  "env.warning_btn": "Mengerti"
+  "env.warning_btn": "Mengerti",
+  "char_edit.avatar_remove": "Hapus avatar",
+  "char_edit.pinterest_toggle_title": "Cari dari Pinterest",
+  "char_edit.pinterest_toggle": "🔎 Cari",
+  "char_edit.pinterest_title": "🔎 Cari Avatar dari Pinterest",
+  "char_edit.pinterest_placeholder": "Kata kunci pencarian...",
+  "char_edit.pinterest_search": "Cari",
+  "char_edit.pinterest_prev": "Sebelumnya",
+  "char_edit.pinterest_next": "Selanjutnya",
+  "char_edit.pinterest_use": "Gunakan Gambar Ini"
 }

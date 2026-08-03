@@ -86,5 +86,14 @@
   "btn.cancel": "キャンセル",
   "env.warning_title": "⚠️ 言語設定の警告",
   "env.warning_desc": ".envで設定された言語はサポートされていないか、見つかりません。デフォルトとして英語（EN）を使用しています。",
-  "env.warning_btn": "理解しました"
+  "env.warning_btn": "理解しました",
+  "char_edit.avatar_remove": "アバターを削除",
+  "char_edit.pinterest_toggle_title": "Pinterestで検索",
+  "char_edit.pinterest_toggle": "🔎 検索",
+  "char_edit.pinterest_title": "🔎 Pinterestでアバターを検索",
+  "char_edit.pinterest_placeholder": "検索キーワード...",
+  "char_edit.pinterest_search": "検索",
+  "char_edit.pinterest_prev": "前へ",
+  "char_edit.pinterest_next": "次へ",
+  "char_edit.pinterest_use": "この画像を使用"
 }

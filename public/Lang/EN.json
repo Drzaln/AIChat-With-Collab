@@ -86,5 +86,14 @@
   "btn.cancel": "Cancel",
   "env.warning_title": "⚠️ Language Configuration Warning",
   "env.warning_desc": "The language set in .env is unsupported or missing. The system is using English (EN) as the default.",
-  "env.warning_btn": "Understood"
+  "env.warning_btn": "Understood",
+  "char_edit.avatar_remove": "Remove avatar",
+  "char_edit.pinterest_toggle_title": "Search from Pinterest",
+  "char_edit.pinterest_toggle": "🔎 Search",
+  "char_edit.pinterest_title": "🔎 Search Avatar from Pinterest",
+  "char_edit.pinterest_placeholder": "Search keyword...",
+  "char_edit.pinterest_search": "Search",
+  "char_edit.pinterest_prev": "Previous",
+  "char_edit.pinterest_next": "Next",
+  "char_edit.pinterest_use": "Use This Image"
 }
