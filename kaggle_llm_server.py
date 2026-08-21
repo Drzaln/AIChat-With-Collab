@@ -300,27 +300,45 @@ try:
     print(f"  \u231b Pulling {MODEL} -- slower than the HF-direct method, but avoids duplicate")
     print(f"     temp files on disk. Progress below refreshes every ~2s instead of every tick.\n")
 
-    def pull_model_with_throttled_log(model):
-        proc = subprocess.Popen(
-            f"ollama pull {model}",
-            shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1,
-        )
-        last_print = 0.0
-        last_line = ""
-        for raw_line in proc.stdout:
-            line = raw_line.strip()
-            if not line:
-                continue
-            last_line = line
-            now = time.time()
-            if now - last_print >= 2:
-                print("\r  " + line[:110].ljust(110), end="", flush=True)
-                last_print = now
-        proc.wait()
-        print()  # finish the throttled line with a newline
-        if proc.returncode != 0:
-            raise RuntimeError(f"ollama pull failed (exit {proc.returncode}): {last_line}")
+    def pull_model_with_throttled_log(model, max_attempts=3):
+        # NOTE: `ollama pull` has a known intermittent bug (ollama/ollama
+        # issues #3628, #4898, #14177) where it fails with
+        # "Error: remove .../blobs/sha256-...-partial-N: no such file or
+        # directory" -- this fires during the cleanup/finalize step for a
+        # blob that actually finished downloading fine; the partial temp
+        # file was already removed/renamed by the time ollama tries to
+        # remove it again (a benign race in its parallel chunk downloader).
+        # It is NOT a disk-space or corruption problem. Simply retrying the
+        # pull almost always succeeds immediately, since ollama resumes and
+        # skips blobs it already has.
+        for attempt in range(1, max_attempts + 1):
+            if attempt > 1:
+                print(f"  \u21bb Retry {attempt}/{max_attempts} after a transient ollama pull error...")
+                time.sleep(3)
+
+            proc = subprocess.Popen(
+                f"ollama pull {model}",
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1,
+            )
+            last_print = 0.0
+            last_line = ""
+            for raw_line in proc.stdout:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                last_line = line
+                now = time.time()
+                if now - last_print >= 2:
+                    print("\r  " + line[:110].ljust(110), end="", flush=True)
+                    last_print = now
+            proc.wait()
+            print()  # finish the throttled line with a newline
+
+            if proc.returncode == 0:
+                return
+            if attempt == max_attempts:
+                raise RuntimeError(f"ollama pull failed after {max_attempts} attempts (exit {proc.returncode}): {last_line}")
 
     pull_model_with_throttled_log(MODEL)
     print(f"  \u2705 Pull complete: {MODEL}")
