@@ -1,7 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════
  *  AI Character Chat — Local Server
- *  Connects to Google Colab LLM via Cloudflare Tunnel
+ *  Connects to a remote llama-server (llama.cpp) instance via
+ *  Cloudflare Tunnel — see Collab-Llama.py / Kaggle-Llama.py
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -25,6 +26,24 @@ const MEMORY_DIR = path.join(DATA_DIR, 'memory');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// ── Helper: safe path construction (path traversal fix) ──────
+// Every ID in this app is a crypto.randomUUID() string. A strict allowlist
+// on the ID itself categorically blocks path traversal in any encoding
+// (../, ..%2f, %2e%2e, %5c, absolute paths, etc.) without needing to
+// enumerate individual attack patterns -- anything that isn't
+// [A-Za-z0-9_-] is rejected outright, so there's nothing left for a
+// traversal sequence to hide in. The resolved-path containment check below
+// is defense-in-depth on top of that, not the primary guard.
+const ID_RE = /^[A-Za-z0-9_-]{1,200}$/;
+
+function safePath(baseDir, id) {
+    if (typeof id !== 'string' || !ID_RE.test(id)) return null;
+    const resolvedBase = path.resolve(baseDir) + path.sep;
+    const resolved = path.resolve(baseDir, `${id}.json`);
+    if (!resolved.startsWith(resolvedBase)) return null;
+    return resolved;
+}
+
 // ── Middleware ───────────────────────────────────────────────
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -39,24 +58,101 @@ function readJSON(filePath, fallback = null) {
 }
 
 function writeJSON(filePath, data) {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmpPath, filePath); // atomic on POSIX filesystems — no partial-write window
 }
 
 // ── Helper: get model parameters from env ────────────────────
-function getModelParams() {
-    const parseNum = (val, defaultVal, isFloat = true) => {
-        if (val === undefined || val === null || val === '') return defaultVal;
-        const parsed = isFloat ? parseFloat(val) : parseInt(val, 10);
-        return isNaN(parsed) ? defaultVal : parsed;
-    };
+// ══════════════════════════════════════════════════════════════
+//  NATIVE LLAMA.CPP SAMPLING PARAMETERS
+// ══════════════════════════════════════════════════════════════
+// Single canonical config: these map 1:1 to llama-server's own JSON body
+// fields (verified against llama.cpp tag b10605's server README — see
+// Build-Llama-CUDA-Release.py). No OLLAMA_*/LITELLM_* duplicate pairs, no
+// translation layer, no ambiguity about whether a value is actually being
+// used. Defaults here intentionally match Collab-Llama.py / Kaggle-Llama.py
+// exactly (same repeat_penalty/DRY/etc. values) — this app always sends
+// these explicitly on every request, which overrides whatever the notebook
+// set as its own CLI startup defaults, so the two MUST agree or one of them
+// is dead configuration. If you change a default, change it in both places.
 
+function parseValidated(val, { type = 'float', defaultVal, min = -Infinity, max = Infinity, label }) {
+    if (val === undefined || val === null || val === '') return defaultVal;
+    const parsed = type === 'int' ? parseInt(val, 10) : parseFloat(val);
+    if (!Number.isFinite(parsed)) {
+        console.warn(`  \u26a0\ufe0f  ${label || 'param'}="${val}" is not a finite number — using default (${defaultVal})`);
+        return defaultVal;
+    }
+    if (parsed < min || parsed > max) {
+        console.warn(`  \u26a0\ufe0f  ${label || 'param'}=${parsed} is outside valid range [${min}, ${max}] — using default (${defaultVal})`);
+        return defaultVal;
+    }
+    return parsed;
+}
+
+function parseBoolEnv(val, defaultVal) {
+    if (val === undefined || val === null || val === '') return defaultVal;
+    return /^(1|true|on|yes)$/i.test(String(val).trim());
+}
+
+function parseListEnv(val, defaultVal) {
+    if (val === undefined || val === null || val === '') return defaultVal;
+    return String(val).split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function getModelParams() {
     return {
-        max_tokens: parseNum(process.env.MAX_TOKENS, 1024, false),
-        temperature: parseNum(process.env.TEMPERATURE, 0.80, true),
-        frequency_penalty: parseNum(process.env.FREQUENCY_PENALTY, 0.1, true),
-        presence_penalty: parseNum(process.env.PRESENCE_PENALTY, 0.1, true),
-        top_p: parseNum(process.env.TOP_P, 0.90, true),
-        top_k: parseNum(process.env.TOP_K, 50, false)
+        // Core generation
+        max_tokens:   parseValidated(process.env.MAX_TOKENS,   { type: 'int',   defaultVal: 1024, min: 1,    max: 32768, label: 'MAX_TOKENS' }),
+        temperature:  parseValidated(process.env.TEMPERATURE,  { defaultVal: 0.80, min: 0,   max: 5,   label: 'TEMPERATURE' }),
+        top_k:        parseValidated(process.env.TOP_K,        { type: 'int', defaultVal: 50,   min: 0,    max: 1000,  label: 'TOP_K' }),
+        top_p:        parseValidated(process.env.TOP_P,        { defaultVal: 0.90, min: 0,   max: 1,   label: 'TOP_P' }),
+        min_p:        parseValidated(process.env.MIN_P,        { defaultVal: 0.05, min: 0,   max: 1,   label: 'MIN_P' }),
+        typical_p:    parseValidated(process.env.TYPICAL_P,    { defaultVal: 1.0,  min: 0,   max: 1,   label: 'TYPICAL_P' }),
+        tfs_z:        parseValidated(process.env.TFS_Z,        { defaultVal: 1.0,  min: 0,   max: 1,   label: 'TFS_Z' }),
+        top_n_sigma:  parseValidated(process.env.TOP_N_SIGMA,  { defaultVal: -1,   min: -1,  max: 100, label: 'TOP_N_SIGMA' }),
+
+        // Windowed repetition control — bounded to the last N tokens, not
+        // the whole conversation. This is the direct fix for the original
+        // "common words get suppressed over a long chat" concern.
+        repeat_last_n:  parseValidated(process.env.REPEAT_LAST_N,  { type: 'int', defaultVal: 256,  min: 0, max: 8192, label: 'REPEAT_LAST_N' }),
+        repeat_penalty: parseValidated(process.env.REPEAT_PENALTY, { defaultVal: 1.05, min: 0, max: 3,    label: 'REPEAT_PENALTY' }),
+
+        // OpenAI-style, cumulative over the WHOLE context by spec. Default
+        // to 0 (disabled) on purpose — see README for why. Must match the
+        // notebook scripts' defaults exactly.
+        presence_penalty:  parseValidated(process.env.PRESENCE_PENALTY,  { defaultVal: 0.0, min: -2, max: 2, label: 'PRESENCE_PENALTY' }),
+        frequency_penalty: parseValidated(process.env.FREQUENCY_PENALTY, { defaultVal: 0.0, min: -2, max: 2, label: 'FREQUENCY_PENALTY' }),
+
+        // DRY sampling — penalizes repeated phrases/loops, not individual
+        // common tokens. The purpose-built fix for long roleplay chats.
+        dry_multiplier:        parseValidated(process.env.DRY_MULTIPLIER,       { defaultVal: 0.8,  min: 0, max: 5,    label: 'DRY_MULTIPLIER' }),
+        dry_base:              parseValidated(process.env.DRY_BASE,             { defaultVal: 1.75, min: 1, max: 4,    label: 'DRY_BASE' }),
+        dry_allowed_length:    parseValidated(process.env.DRY_ALLOWED_LENGTH,   { type: 'int', defaultVal: 2,    min: 1, max: 50,   label: 'DRY_ALLOWED_LENGTH' }),
+        dry_penalty_last_n:    parseValidated(process.env.DRY_PENALTY_LAST_N,   { type: 'int', defaultVal: 1024, min: -1, max: 16384, label: 'DRY_PENALTY_LAST_N' }),
+        dry_sequence_breakers: parseListEnv(process.env.DRY_SEQUENCE_BREAKERS, ["\n", ":", "\"", "*"]),
+
+        // XTC — trims away the single most-probable token some of the time,
+        // to reduce "boring"/predictable output. Off by default (probability
+        // 0) since it's more experimental / can occasionally cut off short
+        // valid replies; conservative default per spec.
+        xtc_probability: parseValidated(process.env.XTC_PROBABILITY, { defaultVal: 0.0, min: 0, max: 1, label: 'XTC_PROBABILITY' }),
+        xtc_threshold:   parseValidated(process.env.XTC_THRESHOLD,   { defaultVal: 0.1, min: 0, max: 1, label: 'XTC_THRESHOLD' }),
+
+        // Dynamic temperature
+        dynatemp_range: parseValidated(process.env.DYNATEMP_RANGE, { defaultVal: 0.0, min: 0, max: 5, label: 'DYNATEMP_RANGE' }),
+        dynatemp_exponent: parseValidated(process.env.DYNATEMP_EXP, { defaultVal: 1.0, min: 0, max: 10, label: 'DYNATEMP_EXP' }),
+
+        // Mirostat — off (0) by default; when on, it takes over from
+        // top_k/top_p/temperature, so it's opt-in only via env.
+        mirostat:    parseValidated(process.env.MIROSTAT,    { type: 'int', defaultVal: 0,   min: 0, max: 2,  label: 'MIROSTAT' }),
+        mirostat_lr: parseValidated(process.env.MIROSTAT_LR, { defaultVal: 0.1, min: 0, max: 5,  label: 'MIROSTAT_LR' }),
+        mirostat_ent: parseValidated(process.env.MIROSTAT_ENT, { defaultVal: 5.0, min: 0, max: 20, label: 'MIROSTAT_ENT' }),
+
+        // Reproducibility / sampler chain
+        seed: parseValidated(process.env.SEED, { type: 'int', defaultVal: -1, min: -1, max: 2147483647, label: 'SEED' }),
+        samplers: parseListEnv(process.env.SAMPLERS, undefined), // undefined = let llama-server use its own default chain
     };
 }
 
@@ -102,15 +198,20 @@ app.post('/api/config', (req, res) => {
 
     for (const [key, val] of Object.entries(updates)) {
         const regex = new RegExp(`^${key}=.*$`, 'm');
+        // Using a replacer function (not a string) avoids `$&`, `$1`, etc. in
+        // `val` being interpreted as regex replacement patterns, which could
+        // otherwise corrupt the .env file if a pasted URL/key contained "$".
         if (regex.test(envContent)) {
-            envContent = envContent.replace(regex, `${key}=${val}`);
+            envContent = envContent.replace(regex, () => `${key}=${val}`);
         } else {
             envContent += `\n${key}=${val}`;
         }
         process.env[key] = val;
     }
 
-    fs.writeFileSync(envPath, envContent, 'utf8');
+    const tmpPath = `${envPath}.${process.pid}.${Date.now()}.tmp`;
+    fs.writeFileSync(tmpPath, envContent, 'utf8');
+    fs.renameSync(tmpPath, envPath);
     res.json({ ok: true });
 });
 
@@ -126,7 +227,8 @@ app.get('/api/characters', (req, res) => {
 });
 
 app.get('/api/characters/:id', (req, res) => {
-    const fp = path.join(CHARACTERS_DIR, `${req.params.id}.json`);
+    const fp = safePath(CHARACTERS_DIR, req.params.id);
+    if (!fp) return res.status(400).json({ error: 'Invalid character id' });
     const char = readJSON(fp);
     if (!char) return res.status(404).json({ error: 'Character not found' });
     res.json(char);
@@ -166,7 +268,8 @@ app.post('/api/characters', (req, res) => {
 });
 
 app.put('/api/characters/:id', (req, res) => {
-    const fp = path.join(CHARACTERS_DIR, `${req.params.id}.json`);
+    const fp = safePath(CHARACTERS_DIR, req.params.id);
+    if (!fp) return res.status(400).json({ error: 'Invalid character id' });
     const existing = readJSON(fp);
     if (!existing) return res.status(404).json({ error: 'Not found' });
 
@@ -190,10 +293,11 @@ app.put('/api/characters/:id', (req, res) => {
 });
 
 app.delete('/api/characters/:id', (req, res) => {
-    const fp = path.join(CHARACTERS_DIR, `${req.params.id}.json`);
+    const fp = safePath(CHARACTERS_DIR, req.params.id);
+    const memFp = safePath(MEMORY_DIR, req.params.id);
+    if (!fp || !memFp) return res.status(400).json({ error: 'Invalid character id' });
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
     // Also delete associated memory
-    const memFp = path.join(MEMORY_DIR, `${req.params.id}.json`);
     if (fs.existsSync(memFp)) fs.unlinkSync(memFp);
     // Delete all chats for this character
     const chatFiles = fs.readdirSync(CHATS_DIR).filter(f => f.endsWith('.json'));
@@ -230,7 +334,8 @@ app.get('/api/chats/:characterId', (req, res) => {
 
 // Get full chat
 app.get('/api/chat/:chatId', (req, res) => {
-    const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
+    const fp = safePath(CHATS_DIR, req.params.chatId);
+    if (!fp) return res.status(400).json({ error: 'Invalid chat id' });
     const chat = readJSON(fp);
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
     res.json(chat);
@@ -254,9 +359,14 @@ app.post('/api/chats', (req, res) => {
 
 // Update chat (add messages, rename, etc.)
 app.put('/api/chat/:chatId', (req, res) => {
-    const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
+    const fp = safePath(CHATS_DIR, req.params.chatId);
+    if (!fp) return res.status(400).json({ error: 'Invalid chat id' });
     const existing = readJSON(fp);
     if (!existing) return res.status(404).json({ error: 'Not found' });
+
+    if (req.body.messages !== undefined && !Array.isArray(req.body.messages)) {
+        return res.status(400).json({ error: '"messages" must be an array' });
+    }
 
     const updated = {
         ...existing,
@@ -270,7 +380,8 @@ app.put('/api/chat/:chatId', (req, res) => {
 
 // Delete chat
 app.delete('/api/chat/:chatId', (req, res) => {
-    const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
+    const fp = safePath(CHATS_DIR, req.params.chatId);
+    if (!fp) return res.status(400).json({ error: 'Invalid chat id' });
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
     res.json({ ok: true });
 });
@@ -280,7 +391,8 @@ app.delete('/api/chat/:chatId', (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 app.get('/api/memory/:characterId', (req, res) => {
-    const fp = path.join(MEMORY_DIR, `${req.params.characterId}.json`);
+    const fp = safePath(MEMORY_DIR, req.params.characterId);
+    if (!fp) return res.status(400).json({ error: 'Invalid character id' });
     const mem = readJSON(fp, {
         characterId: req.params.characterId,
         facts: [],
@@ -293,13 +405,14 @@ app.get('/api/memory/:characterId', (req, res) => {
 });
 
 app.put('/api/memory/:characterId', (req, res) => {
-    const fp = path.join(MEMORY_DIR, `${req.params.characterId}.json`);
+    const fp = safePath(MEMORY_DIR, req.params.characterId);
+    if (!fp) return res.status(400).json({ error: 'Invalid character id' });
     const existing = readJSON(fp, { characterId: req.params.characterId, facts: [], summaries: [], importantEvents: [], userPreferences: {} });
     const updated = {
         ...existing,
         facts: req.body.facts ?? existing.facts,
         summaries: req.body.summaries ?? existing.summaries,
-        importantEvents: req.body.importantEvents ?? existing.importantEvents,
+        importantEvents: (req.body.importantEvents ?? existing.importantEvents ?? []).filter(e => e && typeof e === 'object'),
         userPreferences: req.body.userPreferences ?? existing.userPreferences,
         lastUpdated: new Date().toISOString()
     };
@@ -321,10 +434,9 @@ async function fetchWithRetry(url, options, maxRetries = 2) {
     const RETRYABLE_CODES = [524, 502, 503, 504, 408];
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
             const response = await fetch(url, {
                 ...options,
                 signal: controller.signal
@@ -343,6 +455,7 @@ async function fetchWithRetry(url, options, maxRetries = 2) {
             return response;
 
         } catch (err) {
+            clearTimeout(timeoutId); // was previously only cleared on the success path — leaked on every error
             if (err.name === 'AbortError' && attempt < maxRetries) {
                 const waitSec = (attempt + 1) * 5;
                 console.log(`⚠️  Request timed out, retrying in ${waitSec}s... (attempt ${attempt + 1}/${maxRetries})`);
@@ -358,6 +471,9 @@ async function fetchWithRetry(url, options, maxRetries = 2) {
  * Parse error response — strips HTML and returns clean message
  */
 function parseErrorResponse(status, text) {
+    if (status === 401) {
+        return 'Authentication failed (401). Your API_KEY doesn\'t match the notebook: Colab uses "sk-colab-local" and Kaggle uses "sk-kaggle-local" by default. Copy the exact API_KEY printed at the end of your notebook into Settings.';
+    }
     // Cloudflare error pages are HTML — extract the useful part
     if (text.includes('trycloudflare.com') || text.includes('cloudflare')) {
         if (status === 524) return 'Colab server timeout (524). Model mungkin sedang warm-up atau overloaded. Coba lagi dalam 30 detik.';
@@ -372,7 +488,7 @@ function parseErrorResponse(status, text) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CHAT COMPLETION PROXY — Forward to Colab LLM with memory
+//  CHAT COMPLETION PROXY — Forward to llama-server with memory
 // ══════════════════════════════════════════════════════════════
 
 app.post('/api/chat/send', async (req, res) => {
@@ -380,6 +496,9 @@ app.post('/api/chat/send', async (req, res) => {
 
     if (!characterId || !chatId || !userMessage) {
         return res.status(400).json({ error: 'Missing characterId, chatId, or userMessage' });
+    }
+    if (typeof userMessage !== 'string') {
+        return res.status(400).json({ error: 'userMessage must be a string' });
     }
 
     const baseUrl = process.env.BASE_URL;
@@ -390,19 +509,42 @@ app.post('/api/chat/send', async (req, res) => {
         return res.status(400).json({ error: 'Please configure your Colab BASE_URL in Settings first.' });
     }
 
+    const charFp = safePath(CHARACTERS_DIR, characterId);
+    const memFp = safePath(MEMORY_DIR, characterId);
+    const chatFp = safePath(CHATS_DIR, chatId);
+    if (!charFp || !memFp || !chatFp) {
+        return res.status(400).json({ error: 'Invalid characterId or chatId' });
+    }
+
     // Load character
-    const char = readJSON(path.join(CHARACTERS_DIR, `${characterId}.json`));
+    const char = readJSON(charFp);
     if (!char) return res.status(404).json({ error: 'Character not found' });
 
     // Load memory
-    const memory = readJSON(path.join(MEMORY_DIR, `${characterId}.json`), {
+    const memory = readJSON(memFp, {
         facts: [], summaries: [], importantEvents: [], userPreferences: {}
     });
 
     // Load chat history
-    const chatFp = path.join(CHATS_DIR, `${chatId}.json`);
     const chat = readJSON(chatFp);
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    if (chat.characterId !== characterId) {
+        return res.status(400).json({ error: 'This chat does not belong to the given character' });
+    }
+    if (!Array.isArray(chat.messages)) chat.messages = [];
+
+    // Resolve any pending alternates on the last message BEFORE building the
+    // history sent to the model, so a previously-regenerated-and-selected
+    // reply is what actually gets sent — not the original/rejected content.
+    if (chat.messages.length > 0) {
+        const lastMsg = chat.messages[chat.messages.length - 1];
+        if (lastMsg.role === 'assistant' && lastMsg.alternates) {
+            const selIdx = lastMsg.selectedAlternate || 0;
+            lastMsg.content = lastMsg.alternates[selIdx] || lastMsg.content;
+            delete lastMsg.alternates;
+            delete lastMsg.selectedAlternate;
+        }
+    }
 
     // ── Build system prompt with memory ──
     let systemParts = [];
@@ -430,7 +572,7 @@ app.post('/api/chat/send', async (req, res) => {
         systemParts.push(`\n## Important Facts You Remember\n${memory.facts.map(f => `- ${f}`).join('\n')}`);
     }
     if (memory.importantEvents && memory.importantEvents.length > 0) {
-        const recentEvents = memory.importantEvents.slice(-10);
+        const recentEvents = memory.importantEvents.filter(e => e && typeof e === 'object').slice(-10);
         systemParts.push(`\n## Important Past Events\n${recentEvents.map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
     }
     if (memory.summaries && memory.summaries.length > 0) {
@@ -464,7 +606,7 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
     // Add current user message
     messages.push({ role: 'user', content: userMessage });
 
-    // ── Call LLM via LiteLLM proxy with retry ──
+    // ── Call llama-server (with retry) ──
     try {
         const endpoint = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
@@ -496,38 +638,31 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
         console.log(`📥 Response received (${assistantContent.length} chars)`);
 
         // ── Save messages to chat history ──
+        // Re-read the chat fresh from disk here (rather than reusing the copy
+        // loaded before the 5-120s LLM call) so we don't clobber an edit or
+        // regenerate that happened on this chat while we were waiting (C5).
         const now = new Date().toISOString();
-        chat.messages = chat.messages || [];
+        const freshChat = readJSON(chatFp) || chat;
+        if (!Array.isArray(freshChat.messages)) freshChat.messages = [];
 
-        // Clean up alternates from previous messages if any
-        if (chat.messages.length > 0) {
-            const lastMsg = chat.messages[chat.messages.length - 1];
-            if (lastMsg.role === 'assistant' && lastMsg.alternates) {
-                const selIdx = lastMsg.selectedAlternate || 0;
-                lastMsg.content = lastMsg.alternates[selIdx] || lastMsg.content;
-                delete lastMsg.alternates;
-                delete lastMsg.selectedAlternate;
-            }
-        }
-
-        chat.messages.push({ role: 'user', content: userMessage, timestamp: now });
-        chat.messages.push({ role: 'assistant', content: assistantContent, timestamp: now });
+        freshChat.messages.push({ role: 'user', content: userMessage, timestamp: now });
+        freshChat.messages.push({ role: 'assistant', content: assistantContent, timestamp: now });
 
         // Auto-set chat title from first user message
-        if (chat.messages.length <= 2) {
-            chat.title = userMessage.substring(0, 60) + (userMessage.length > 60 ? '…' : '');
+        if (freshChat.messages.length <= 2) {
+            freshChat.title = userMessage.substring(0, 60) + (userMessage.length > 60 ? '…' : '');
         }
 
-        chat.updatedAt = now;
-        writeJSON(chatFp, chat);
+        freshChat.updatedAt = now;
+        writeJSON(chatFp, freshChat);
 
         // ── Auto-extract memory after every exchange ──
-        autoExtractMemory(characterId, userMessage, assistantContent, memory);
+        autoExtractMemory(memFp, userMessage, assistantContent, memory);
 
         res.json({
             content: assistantContent,
-            chatId: chat.id,
-            messageIndex: chat.messages.length - 1
+            chatId: freshChat.id,
+            messageIndex: freshChat.messages.length - 1
         });
 
     } catch (err) {
@@ -558,13 +693,22 @@ app.post('/api/chat/regenerate', async (req, res) => {
         return res.status(400).json({ error: 'Please configure your Colab BASE_URL in Settings first.' });
     }
 
-    const char = readJSON(path.join(CHARACTERS_DIR, `${characterId}.json`));
-    const memory = readJSON(path.join(MEMORY_DIR, `${characterId}.json`), { facts: [], summaries: [], importantEvents: [], userPreferences: {} });
-    const chatFp = path.join(CHATS_DIR, `${chatId}.json`);
+    const charFp = safePath(CHARACTERS_DIR, characterId);
+    const memFp = safePath(MEMORY_DIR, characterId);
+    const chatFp = safePath(CHATS_DIR, chatId);
+    if (!charFp || !memFp || !chatFp) {
+        return res.status(400).json({ error: 'Invalid characterId or chatId' });
+    }
+
+    const char = readJSON(charFp);
+    const memory = readJSON(memFp, { facts: [], summaries: [], importantEvents: [], userPreferences: {} });
     const chat = readJSON(chatFp);
 
-    if (!char || !chat || !chat.messages || chat.messages.length === 0) {
+    if (!char || !chat || !Array.isArray(chat.messages) || chat.messages.length === 0) {
         return res.status(404).json({ error: 'Not found or empty chat' });
+    }
+    if (chat.characterId !== characterId) {
+        return res.status(400).json({ error: 'This chat does not belong to the given character' });
     }
 
     const lastMsg = chat.messages[chat.messages.length - 1];
@@ -581,7 +725,7 @@ app.post('/api/chat/regenerate', async (req, res) => {
     if (char.systemPrompt) systemParts.push(`\n## Additional Instructions\n${char.systemPrompt}`);
     if (char.exampleDialogue) systemParts.push(`\n## Example Dialogue Style\n${char.exampleDialogue}`);
     if (memory.facts && memory.facts.length > 0) systemParts.push(`\n## Important Facts You Remember\n${memory.facts.map(f => `- ${f}`).join('\n')}`);
-    if (memory.importantEvents && memory.importantEvents.length > 0) systemParts.push(`\n## Important Past Events\n${memory.importantEvents.slice(-10).map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
+    if (memory.importantEvents && memory.importantEvents.length > 0) systemParts.push(`\n## Important Past Events\n${memory.importantEvents.filter(e => e && typeof e === 'object').slice(-10).map(e => `- [${e.date || 'unknown'}] ${e.description}`).join('\n')}`);
     if (memory.summaries && memory.summaries.length > 0) systemParts.push(`\n## Previous Conversation Summaries\n${memory.summaries.slice(-3).map(s => `- ${s}`).join('\n')}`);
     if (memory.userPreferences && Object.keys(memory.userPreferences).length > 0) {
         systemParts.push(`\n## What You Know About the User\n${Object.entries(memory.userPreferences).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`);
@@ -594,6 +738,13 @@ app.post('/api/chat/regenerate', async (req, res) => {
     // Include all but the last assistant message
     const recentMessages = chat.messages.slice(-30, -1);
     recentMessages.forEach(m => messages.push({ role: m.role, content: m.content }));
+
+    if (recentMessages.length === 0) {
+        // Regenerating the very first message (the character's opening
+        // greeting) — there's no prior turn to give the model, so it would
+        // otherwise receive only the system prompt and no user turn.
+        messages.push({ role: 'user', content: '[Begin the roleplay with your opening message, based on the scenario above.]' });
+    }
 
     try {
         const endpoint = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
@@ -615,21 +766,31 @@ app.post('/api/chat/regenerate', async (req, res) => {
         const data = await response.json();
         const assistantContent = data.choices?.[0]?.message?.content || 'No response from model.';
 
-        if (!lastMsg.alternates) {
-            lastMsg.alternates = [lastMsg.content];
-        }
+        // Re-read the chat fresh from disk (rather than reusing the copy
+        // loaded before the 5-120s LLM call) so a concurrent edit/send isn't
+        // clobbered (C5). We target the same message index that was the last
+        // assistant message when this request started.
+        const targetIndex = chat.messages.length - 1;
+        const freshChat = readJSON(chatFp) || chat;
+        const targetMsg = (freshChat.messages || [])[targetIndex];
 
-        lastMsg.alternates.push(assistantContent);
-        lastMsg.selectedAlternate = lastMsg.alternates.length - 1;
-        chat.updatedAt = new Date().toISOString();
-        writeJSON(chatFp, chat);
+        // Fall back to the in-memory message if the chat changed shape underneath us
+        const msgToUpdate = (targetMsg && targetMsg.role === 'assistant') ? targetMsg : lastMsg;
+
+        if (!msgToUpdate.alternates) {
+            msgToUpdate.alternates = [msgToUpdate.content];
+        }
+        msgToUpdate.alternates.push(assistantContent);
+        msgToUpdate.selectedAlternate = msgToUpdate.alternates.length - 1;
+        freshChat.updatedAt = new Date().toISOString();
+        writeJSON(chatFp, freshChat);
 
         res.json({
             content: assistantContent,
-            alternates: lastMsg.alternates,
-            selectedAlternate: lastMsg.selectedAlternate,
-            chatId: chat.id,
-            messageIndex: chat.messages.length - 1
+            alternates: msgToUpdate.alternates,
+            selectedAlternate: msgToUpdate.selectedAlternate,
+            chatId: freshChat.id,
+            messageIndex: targetIndex
         });
     } catch (err) {
         const msg = err.name === 'AbortError' ? 'Request timed out.' : `Connection failed: ${err.message}`;
@@ -639,10 +800,18 @@ app.post('/api/chat/regenerate', async (req, res) => {
 
 // Set selected alternate
 app.put('/api/chat/:chatId/alternate', (req, res) => {
-    const { messageIndex, selectedAlternate } = req.body;
-    const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
+    const messageIndex = Number(req.body.messageIndex);
+    const { selectedAlternate } = req.body;
+    const fp = safePath(CHATS_DIR, req.params.chatId);
+    if (!fp) return res.status(400).json({ error: 'Invalid chat id' });
     const chat = readJSON(fp);
-    if (!chat || !chat.messages || !chat.messages[messageIndex]) return res.status(404).json({ error: 'Not found' });
+    if (!chat || !Array.isArray(chat.messages) || !Number.isInteger(messageIndex) ||
+        messageIndex < 0 || !chat.messages[messageIndex]) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+    if (!Number.isInteger(selectedAlternate) || selectedAlternate < 0) {
+        return res.status(400).json({ error: 'selectedAlternate must be a non-negative integer' });
+    }
 
     chat.messages[messageIndex].selectedAlternate = selectedAlternate;
     writeJSON(fp, chat);
@@ -654,11 +823,17 @@ app.put('/api/chat/:chatId/alternate', (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 app.put('/api/chat/:chatId/message', (req, res) => {
-    const { messageIndex, content } = req.body;
-    const fp = path.join(CHATS_DIR, `${req.params.chatId}.json`);
+    const messageIndex = Number(req.body.messageIndex);
+    const { content } = req.body;
+    const fp = safePath(CHATS_DIR, req.params.chatId);
+    if (!fp) return res.status(400).json({ error: 'Invalid chat id' });
+    if (typeof content !== 'string') {
+        return res.status(400).json({ error: 'content must be a string' });
+    }
     const chat = readJSON(fp);
 
-    if (!chat || !chat.messages || !chat.messages[messageIndex]) {
+    if (!chat || !Array.isArray(chat.messages) || !Number.isInteger(messageIndex) ||
+        messageIndex < 0 || !chat.messages[messageIndex]) {
         return res.status(404).json({ error: 'Chat or message not found' });
     }
 
@@ -681,14 +856,13 @@ app.put('/api/chat/:chatId/message', (req, res) => {
  * Auto-extract memory from conversations using keyword heuristics.
  * This runs after every exchange to pick up important facts.
  */
-function autoExtractMemory(characterId, userMsg, assistantMsg, memory) {
-    const fp = path.join(MEMORY_DIR, `${characterId}.json`);
+function autoExtractMemory(fp, userMsg, assistantMsg, memory) {
     let changed = false;
     const lower = userMsg.toLowerCase();
 
     // Detect user sharing personal info
     const namePatterns = [
-        /(?:nama\s+(?:ku|saya|aku|gue|gw)\s+(?:adalah\s+)?|my\s+name\s+is\s+|call\s+me\s+|panggil\s+(?:saya|aku|gue|gw)\s+)(\w+)/i
+        /\b(?:nama\s+(?:ku|saya|aku|gue|gw)\s+(?:adalah\s+)?|my\s+name\s+is\s+|call\s+me\s+|panggil\s+(?:saya|aku|gue|gw)\s+)(\w+)/i
     ];
     for (const p of namePatterns) {
         const m = userMsg.match(p);
@@ -700,7 +874,7 @@ function autoExtractMemory(characterId, userMsg, assistantMsg, memory) {
     }
 
     // Detect age
-    const ageMatch = userMsg.match(/(?:umur\s*(?:ku|saya|aku)\s*|(?:i\s+am|i'm)\s+)(\d{1,3})\s*(?:tahun|years?|th)?/i);
+    const ageMatch = userMsg.match(/\b(?:umur\s*(?:ku|saya|aku)\s*|(?:i\s+am|i'm)\s+)(\d{1,3})\s*(?:tahun|years?|th)?/i);
     if (ageMatch) {
         memory.userPreferences = memory.userPreferences || {};
         memory.userPreferences['umur'] = ageMatch[1];
@@ -708,7 +882,10 @@ function autoExtractMemory(characterId, userMsg, assistantMsg, memory) {
     }
 
     // Detect preferences (suka/like, tidak suka/dislike)
-    const likeMatch = userMsg.match(/(?:aku|saya|gue|gw|i)\s+(?:suka|like|love|senang|hobby)\s+(.+)/i);
+    // NOTE: \b word boundaries before the pronoun alternatives are required —
+    // without them, "i" would match the trailing letter of unrelated words
+    // like "hai", turning "hai suka gak sama aku?" into a false "likes" fact.
+    const likeMatch = userMsg.match(/\b(?:aku|saya|gue|gw|i)\b\s+(?:suka|like|love|senang|hobby)\b\s+(.+)/i);
     if (likeMatch) {
         memory.facts = memory.facts || [];
         const fact = `User menyukai: ${likeMatch[1].trim()}`;
@@ -718,7 +895,7 @@ function autoExtractMemory(characterId, userMsg, assistantMsg, memory) {
         }
     }
 
-    const dislikeMatch = userMsg.match(/(?:aku|saya|gue|gw|i)\s+(?:tidak suka|benci|hate|dislike|nggak suka|ga suka)\s+(.+)/i);
+    const dislikeMatch = userMsg.match(/\b(?:aku|saya|gue|gw|i)\b\s+(?:tidak suka|benci|hate|dislike|nggak suka|ga suka)\b\s+(.+)/i);
     if (dislikeMatch) {
         memory.facts = memory.facts || [];
         const fact = `User tidak suka: ${dislikeMatch[1].trim()}`;
@@ -758,19 +935,29 @@ app.post('/api/memory/:characterId/summarize', async (req, res) => {
         return res.status(400).json({ error: 'Configure BASE_URL first' });
     }
 
+    const chatFp = safePath(CHATS_DIR, chatId);
+    const memFp = safePath(MEMORY_DIR, characterId);
+    if (!chatFp || !memFp) {
+        return res.status(400).json({ error: 'Invalid characterId or chatId' });
+    }
+
     // Load chat
-    const chat = readJSON(path.join(CHATS_DIR, `${chatId}.json`));
-    if (!chat || !chat.messages || chat.messages.length < 4) {
+    const chat = readJSON(chatFp);
+    if (!chat || !Array.isArray(chat.messages) || chat.messages.length < 4) {
         return res.status(400).json({ error: 'Not enough messages to summarize' });
+    }
+    if (chat.characterId !== characterId) {
+        return res.status(400).json({ error: 'This chat does not belong to the given character' });
     }
 
     // Ask LLM to extract memory
     // NOTE: only send the most recent messages. Sending the entire chat history
-    // (potentially hundreds of turns) can exceed the Colab model's context window
-    // (Ollama defaults to a small num_ctx unless configured otherwise — see
-    // colab_llm_server.py). When that happens the upstream server may silently
-    // truncate the prompt or return an empty/garbled completion instead of an
-    // HTTP error, which is what produced "null-ish" results here.
+    // (potentially hundreds of turns) can exceed the model's context window
+    // (see NUM_CTX in Collab-Llama.py / Kaggle-Llama.py — llama-server has no
+    // implicit fallback the way Ollama did). When that happens the upstream
+    // server may silently truncate the prompt or return an empty/garbled
+    // completion instead of an HTTP error, which is what produced "null-ish"
+    // results here.
     const MAX_SUMMARIZE_MESSAGES = 40;
     const messagesForSummary = chat.messages.slice(-MAX_SUMMARIZE_MESSAGES);
     const conversationText = messagesForSummary.map(m =>
@@ -842,7 +1029,6 @@ If there are no facts or events worth noting, write "- none" under that label in
         }
 
         // Parse extraction
-        const memFp = path.join(MEMORY_DIR, `${characterId}.json`);
         const memory = readJSON(memFp, {
             characterId, facts: [], summaries: [],
             importantEvents: [], userPreferences: {}
@@ -909,6 +1095,13 @@ If there are no facts or events worth noting, write "- none" under that label in
                 memory.summaries.push(fallback);
                 warning = 'The model\'s response didn\'t follow the expected format, so it was saved as a raw summary instead of structured facts/events. Check server logs for the full output.';
             }
+        }
+
+        // Keep memory size manageable — mirrors the facts/events caps in
+        // autoExtractMemory. Only the last 3 are ever injected into the
+        // prompt anyway, so this just prevents unbounded file growth.
+        if (memory.summaries.length > 30) {
+            memory.summaries = memory.summaries.slice(-30);
         }
 
         memory.lastUpdated = new Date().toISOString();

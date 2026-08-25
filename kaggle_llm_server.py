@@ -361,7 +361,7 @@ try:
         json={"model": ollama_model_name, "prompt": "hi", "stream": False},
         timeout=300,
     )
-    if warm.status_code >= 500:
+    if warm.status_code != 200:
         raise RuntimeError(f"Model failed to load: HTTP {warm.status_code} -- {warm.text[:300]}")
     time.sleep(2)
     check_dual_gpu_usage()

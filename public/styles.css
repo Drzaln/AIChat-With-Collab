@@ -1716,6 +1716,15 @@ select.form-input {
     opacity: 1;
 }
 
+.chat-item-unread-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-primary, #6c5ce7);
+    margin-left: 4px;
+}
+
 .chat-item-edit,
 .chat-item-delete {
     background: none;

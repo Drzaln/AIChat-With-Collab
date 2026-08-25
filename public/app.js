@@ -14,7 +14,8 @@ let state = {
     sending: false,
     config: {},
     characterSearchQuery: '',
-    pinterest: { results: [], index: 0, loading: false }
+    pinterest: { results: [], index: 0, loading: false },
+    unreadChats: new Set()
 };
 
 window.langData = {};
@@ -27,7 +28,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 // ── Avatar Helper ────────────────────────────────────────
 function getAvatarInnerHtml(avatar, name) {
     if (avatar && avatar.startsWith('data:')) {
-        return `<img src="${avatar}" alt="${escapeHtml(name || 'avatar')}">`;
+        return `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || 'avatar')}">`;
     }
     return avatar || (name ? name.charAt(0).toUpperCase() : 'A');
 }
@@ -37,7 +38,7 @@ function updateAvatarPreview(avatarData) {
     const removeBtn = $('#avatar-remove-btn');
     if (!preview || !removeBtn) return;
     if (avatarData && avatarData.startsWith('data:')) {
-        preview.innerHTML = `<img src="${avatarData}" alt="avatar">`;
+        preview.innerHTML = `<img src="${escapeHtml(avatarData)}" alt="avatar">`;
         preview.classList.add('has-image');
         removeBtn.style.display = 'flex';
     } else {
@@ -55,10 +56,19 @@ function updateAvatarPreview(avatarData) {
 
 // ── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadConfig();
-    await loadCharacters();
+    try {
+        await loadConfig();
+    } catch (err) {
+        console.error('Failed to load config', err);
+    }
+    try {
+        await loadCharacters();
+    } catch (err) {
+        console.error('Failed to load characters', err);
+        if (typeof toast === 'function') toast('Failed to load data from server. Check that the server is running.', 'error');
+    }
     testConnection();
-    bindEvents();
+    bindEvents(); // must always run so the UI stays interactive even if the above failed
 });
 
 // ══════════════════════════════════════════════════════════
@@ -71,8 +81,27 @@ async function api(method, url, body = null) {
         headers: { 'Content-Type': 'application/json' }
     };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(url, opts);
-    return res.json();
+
+    let res;
+    try {
+        res = await fetch(url, opts);
+    } catch (err) {
+        // Network-level failure (server down, DNS, offline, etc.)
+        return { error: `Network error: ${err.message}` };
+    }
+
+    let data;
+    try {
+        data = await res.json();
+    } catch {
+        // Response wasn't valid JSON (e.g. an HTML error page from a 500)
+        data = { error: `Server returned an unexpected response (HTTP ${res.status})` };
+    }
+
+    if (!res.ok && !data.error) {
+        data.error = `Request failed (HTTP ${res.status})`;
+    }
+    return data;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -90,28 +119,44 @@ async function loadConfig() {
     }
 }
 
+const RTL_LANGS = ['AR', 'HE', 'FA', 'UR'];
+
 async function loadLanguage(langCode, showWarning) {
     try {
         const res = await fetch(`/Lang/${langCode}.json`);
         if (res.ok) {
             window.langData = await res.json();
-            
+
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (window.langData[key]) el.innerHTML = window.langData[key];
             });
-            
+
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.getAttribute('data-i18n-placeholder');
                 if (window.langData[key]) el.placeholder = window.langData[key];
             });
-            
+
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (window.langData[key]) el.title = window.langData[key];
+            });
+
+            document.documentElement.lang = langCode.toLowerCase();
+            document.documentElement.dir = RTL_LANGS.includes(langCode.toUpperCase()) ? 'rtl' : 'ltr';
+
             if (showWarning && typeof openModal === 'function') {
                 openModal('modal-lang-warning');
             }
+        } else {
+            console.error(`Language file not found: /Lang/${langCode}.json (HTTP ${res.status})`);
+            if (typeof toast === 'function') {
+                toast(`Language "${langCode}" not found — falling back to default text`, 'error');
+            }
         }
-    } catch(err) {
+    } catch (err) {
         console.error('Failed to load language', err);
+        if (typeof toast === 'function') toast('Failed to load language file', 'error');
     }
 }
 
@@ -121,7 +166,7 @@ async function saveConfig() {
     const modelName = $('#cfg-model').value;
 
     await api('POST', '/api/config', { baseUrl, apiKey, modelName });
-    state.config = { baseUrl, apiKey, modelName };
+    state.config = { ...state.config, baseUrl, apiKey, modelName };
     toast(t('toast.settings_saved'), 'success');
     closeModal('modal-settings');
     testConnection();
@@ -345,6 +390,7 @@ function renderChatList() {
              data-id="${c.id}" onclick="loadChat('${c.id}')">
             <span class="chat-item-icon">💬</span>
             <span class="chat-item-title">${escapeHtml(c.title)}</span>
+            ${state.unreadChats.has(c.id) ? '<span class="chat-item-unread-dot" title="New reply"></span>' : ''}
             <div class="chat-item-actions">
                 <button class="chat-item-edit" onclick="event.stopPropagation(); startRenameChat('${c.id}')" title="Rename">✏️</button>
                 <button class="chat-item-delete" onclick="event.stopPropagation(); deleteChat('${c.id}')" title="Delete">✕</button>
@@ -389,6 +435,7 @@ async function loadChat(chatId) {
     if (!chat || chat.error) return;
 
     state.currentChatId = chatId;
+    state.unreadChats.delete(chatId);
     renderChatList();
     renderMessages(chat.messages || []);
     closeSidebarOnMobile();
@@ -497,8 +544,10 @@ function appendMessage(role, content, isLastAssistant = false) {
     const regenerateBtn = isLastAssistant ? `<button class="regenerate-btn" onclick="regenerateLastMessage()" title="Regenerate">🔄</button>` : '';
     const touchEvents = isLastAssistant ? 'ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event, this)"' : '';
 
+    const index = document.querySelectorAll('#chat-messages .message').length;
     const div = document.createElement('div');
     div.className = `message ${role}`;
+    div.dataset.index = index;
     div.innerHTML = `
         <div class="message-avatar">${avatar}</div>
         <div style="flex:1; min-width:0;">
@@ -508,11 +557,12 @@ function appendMessage(role, content, isLastAssistant = false) {
             </div>
             <div class="message-meta">
                 <span class="message-time">${time}</span>
-                <button class="message-action-btn" onclick="editMessage(${document.querySelectorAll('#chat-messages .message').length})" title="Edit">✏️</button>
+                <button class="message-action-btn" onclick="editMessage(${index})" title="Edit">✏️</button>
             </div>
         </div>`;
     container.appendChild(div);
     scrollToBottom();
+    return div;
 }
 
 function scrollToBottom() {
@@ -529,15 +579,21 @@ function scrollToBottom() {
 async function sendMessage() {
     const input = $('#chat-input');
     const text = input.value.trim();
-    if (!text || state.sending) return;
+    if (!text) return;
+    if (state.sending) {
+        toast(t('toast.please_wait') || 'Please wait for the current reply to finish', 'info');
+        return;
+    }
     if (!state.currentCharacterId || !state.currentChatId) return;
 
     state.sending = true;
     input.value = '';
     autoResizeInput();
+    const requestChatId = state.currentChatId; // capture before the await
+    const requestCharacterId = state.currentCharacterId;
 
     // Show user message immediately
-    appendMessage('user', text);
+    const userBubble = appendMessage('user', text);
 
     // Show typing indicator
     $('#typing-indicator').style.display = 'flex';
@@ -545,15 +601,28 @@ async function sendMessage() {
 
     try {
         const result = await api('POST', '/api/chat/send', {
-            characterId: state.currentCharacterId,
-            chatId: state.currentChatId,
+            characterId: requestCharacterId,
+            chatId: requestChatId,
             userMessage: text
         });
 
         $('#typing-indicator').style.display = 'none';
 
         if (result.error) {
+            // The message was never saved server-side — remove the phantom
+            // bubble and give the text back so the user can retry.
+            if (userBubble) userBubble.remove();
+            input.value = text;
+            autoResizeInput();
             toast(result.error, 'error');
+            return;
+        }
+
+        if (state.currentChatId !== requestChatId) {
+            // User switched to a different chat while this was in flight —
+            // the reply was saved server-side, just don't render it here (H6).
+            state.unreadChats.add(requestChatId);
+            if (state.currentCharacterId === requestCharacterId) renderChatList();
             return;
         }
 
@@ -561,11 +630,14 @@ async function sendMessage() {
         appendMessage('assistant', result.content, true);
 
         // Refresh chat list (title might have changed)
-        state.chats = await api('GET', `/api/chats/${state.currentCharacterId}`);
-        renderChatList();
+        state.chats = await api('GET', `/api/chats/${requestCharacterId}`);
+        if (state.currentCharacterId === requestCharacterId) renderChatList();
 
     } catch (err) {
         $('#typing-indicator').style.display = 'none';
+        if (userBubble) userBubble.remove();
+        input.value = text;
+        autoResizeInput();
         toast(`Error: ${err.message}`, 'error');
     } finally {
         state.sending = false;
@@ -597,11 +669,14 @@ window.regenerateLastMessage = async function () {
     state.sending = true;
     const btn = document.querySelector('.regenerate-btn');
     if (btn) btn.innerHTML = '<span class="spinner"></span>';
+    const sendBtn = $('#btn-send');
+    if (sendBtn) sendBtn.disabled = true;
+    const requestChatId = state.currentChatId; // capture before the await
 
     try {
         const result = await api('POST', '/api/chat/regenerate', {
             characterId: state.currentCharacterId,
-            chatId: state.currentChatId
+            chatId: requestChatId
         });
 
         if (result.error) {
@@ -609,8 +684,14 @@ window.regenerateLastMessage = async function () {
             return;
         }
 
-        const chat = await api('GET', `/api/chat/${state.currentChatId}`);
-        if (chat && !chat.error) {
+        if (state.currentChatId !== requestChatId) {
+            state.unreadChats.add(requestChatId);
+            renderChatList();
+            return; // user switched chats meanwhile
+        }
+
+        const chat = await api('GET', `/api/chat/${requestChatId}`);
+        if (chat && !chat.error && state.currentChatId === requestChatId) {
             renderMessages(chat.messages || []);
         }
     } catch (err) {
@@ -618,29 +699,38 @@ window.regenerateLastMessage = async function () {
     } finally {
         state.sending = false;
         if (btn) btn.innerHTML = '🔄';
+        if (sendBtn) sendBtn.disabled = false;
     }
 };
 
 window.changeAlternate = async function (msgIndex, delta) {
-    const chat = await api('GET', `/api/chat/${state.currentChatId}`);
-    if (!chat || chat.error) return;
-    const msg = chat.messages[msgIndex];
-    if (!msg || !msg.alternates) return;
+    state._alternateNavBusy = state._alternateNavBusy || new Set();
+    if (state._alternateNavBusy.has(msgIndex)) return; // ignore rapid double-clicks mid-request
+    state._alternateNavBusy.add(msgIndex);
 
-    let sel = msg.selectedAlternate || 0;
-    sel += delta;
-    if (sel < 0) sel = 0;
-    if (sel >= msg.alternates.length) sel = msg.alternates.length - 1;
+    try {
+        const chat = await api('GET', `/api/chat/${state.currentChatId}`);
+        if (!chat || chat.error) return;
+        const msg = chat.messages[msgIndex];
+        if (!msg || !msg.alternates) return;
 
-    msg.selectedAlternate = sel;
+        let sel = msg.selectedAlternate || 0;
+        sel += delta;
+        if (sel < 0) sel = 0;
+        if (sel >= msg.alternates.length) sel = msg.alternates.length - 1;
 
-    // Optimistic re-render
-    renderMessages(chat.messages);
+        msg.selectedAlternate = sel;
 
-    await api('PUT', `/api/chat/${state.currentChatId}/alternate`, {
-        messageIndex: msgIndex,
-        selectedAlternate: sel
-    });
+        // Optimistic re-render
+        renderMessages(chat.messages);
+
+        await api('PUT', `/api/chat/${state.currentChatId}/alternate`, {
+            messageIndex: msgIndex,
+            selectedAlternate: sel
+        });
+    } finally {
+        state._alternateNavBusy.delete(msgIndex);
+    }
 };
 
 window.editMessage = async function (index) {
@@ -925,7 +1015,10 @@ function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    // div.innerHTML escapes & < > for text nodes, but NOT quotes (quotes only
+    // matter inside attribute values, which is exactly where several callers
+    // use this output — e.g. value="${escapeHtml(x)}"). Escape them explicitly.
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function formatMessageContent(content) {
@@ -978,7 +1071,7 @@ function bindEvents() {
         const apiKey = $('#cfg-api-key').value.trim();
         const modelName = $('#cfg-model').value;
         await api('POST', '/api/config', { baseUrl, apiKey, modelName });
-        state.config = { baseUrl, apiKey, modelName };
+        state.config = { ...state.config, baseUrl, apiKey, modelName };
         await testConnection();
         btn.disabled = false;
         btn.innerHTML = t('settings.btn_test') || '🔌 Test Connection';

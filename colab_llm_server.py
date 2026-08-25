@@ -158,6 +158,14 @@ else:
 
 # ── 2. START OLLAMA SERVER ────────────────────────────
 section(2, 5, "Start Ollama Server")
+# If this cell is being re-run (e.g. after a partial earlier failure), a
+# stale `ollama serve` from the previous run may still be alive holding the
+# old model in VRAM. wait_http() below would then get a 200 from that STALE
+# server, giving false confidence, while the freshly pulled/created model
+# below doesn't actually match what's being served. Kill any existing
+# instance first so re-runs always start from a clean server.
+sh("pkill -f 'ollama serve'", check=False, quiet=True)
+time.sleep(1)
 ollama_proc = bg(
     "OLLAMA_HOST=0.0.0.0:11434 OLLAMA_ORIGINS='*' ollama serve",
     "/tmp/ollama.log"
@@ -169,7 +177,28 @@ wait_http(f"http://localhost:{OLLAMA_PORT}", 30, "Ollama")
 # ── 3. PULL MODEL ──────────────────────────────
 section(3, 5, "Pull Model from HuggingFace (~7 GB)")
 print(f"  ⌛ First run takes 10-20 min depending on Colab speed…\n")
-sh(f"ollama pull {MODEL}")
+
+def pull_model_with_retry(model, max_attempts=3):
+    # NOTE: `ollama pull` has a known intermittent bug (ollama/ollama issues
+    # #3628, #4898, #14177) where it fails with "Error: remove
+    # .../blobs/sha256-...-partial-N: no such file or directory" during the
+    # cleanup/finalize step for a blob that actually finished downloading
+    # fine. It's a benign race in ollama's parallel chunk downloader, not a
+    # disk-space or corruption problem — simply retrying almost always
+    # succeeds immediately since ollama resumes and skips blobs it already
+    # has. Without this retry, this single transient error used to kill the
+    # whole Colab cell (unhandled CalledProcessError from check=True).
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            print(f"  ↻ Retry {attempt}/{max_attempts} after a transient ollama pull error...")
+            time.sleep(3)
+        result = sh(f"ollama pull {model}", check=False)
+        if result.returncode == 0:
+            return
+        if attempt == max_attempts:
+            raise RuntimeError(f"ollama pull failed after {max_attempts} attempts (exit {result.returncode})")
+
+pull_model_with_retry(MODEL)
 
 # Alias ke nama pendek agar LiteLLM bisa referensikan dengan mudah
 with open("/tmp/Modelfile", "w") as f:
