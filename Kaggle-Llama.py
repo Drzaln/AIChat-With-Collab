@@ -222,7 +222,7 @@ def verify_prebuilt(pkg_dir):
         raise RuntimeError(f"prebuilt binary failed a real --version run (exit {r.returncode}): {r.stderr[:200]}")
 
     print(f"  \u2705 Prebuilt verified: {meta.get('llama_cpp_tag')} / {meta.get('cuda_arch')} "
-          f"(built {meta.get('built_at', '?')})")
+          f"(built {meta.get('built_at', '?')}, CUDA VMM: {meta.get('cuda_vmm', 'unknown')})")
     return run_sh
 
 
@@ -255,6 +255,59 @@ def try_prebuilt():
     return verify_prebuilt(entries[0])
 
 
+def find_cuda_driver_lib():
+    """Locate a libcuda.so the linker can actually consume (see
+    Collab-Llama.py for the full rationale -- same fix, same root cause)."""
+    cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH") or "/usr/local/cuda"
+    dirs = []
+    for base in (cuda_home, "/usr/local/cuda"):
+        dirs += [
+            f"{base}/lib64/stubs", f"{base}/lib/stubs",
+            f"{base}/targets/x86_64-linux/lib/stubs",
+            f"{base}/lib64", f"{base}/targets/x86_64-linux/lib",
+        ]
+    dirs += ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"]
+
+    for d in dirs:
+        p = f"{d}/libcuda.so"
+        if os.path.exists(p):
+            return p, False
+
+    versioned = []
+    for d in dirs:
+        if os.path.isfile(f"{d}/libcuda.so.1"):
+            versioned.append(f"{d}/libcuda.so.1")
+        versioned += sorted(glob.glob(f"{d}/libcuda.so.*"))
+    r = sh("ldconfig -p", check=False, capture=True)
+    if r.returncode == 0:
+        for line in r.stdout.splitlines():
+            if "libcuda.so" in line and "=>" in line:
+                versioned.append(line.split("=>")[-1].strip())
+    for p in versioned:
+        if os.path.isfile(p):
+            return p, True
+    return None, False
+
+
+def cuda_driver_cmake_flags():
+    path, is_versioned = find_cuda_driver_lib()
+    if not path:
+        print("  \u26a0\ufe0f No libcuda.so / libcuda.so.1 found -- will build with CUDA VMM disabled if needed.")
+        return []
+    if is_versioned:
+        link_dir = "/tmp/cuda-driver-link"
+        os.makedirs(link_dir, exist_ok=True)
+        link_path = f"{link_dir}/libcuda.so"
+        if os.path.lexists(link_path):
+            os.remove(link_path)
+        os.symlink(path, link_path)
+        print(f"  Driver lib: {path} (symlinked -> {link_path})")
+    else:
+        link_path, link_dir = path, os.path.dirname(path)
+        print(f"  Driver lib: {path}")
+    return [f"-DCMAKE_LIBRARY_PATH={link_dir}", f"-DCUDA_cuda_driver_LIBRARY={link_path}"]
+
+
 def build_from_source():
     server_bin = f"{LLAMA_SRC_DIR}/build/bin/llama-server"
     if os.path.isfile(server_bin):
@@ -277,12 +330,24 @@ def build_from_source():
     run_with_retry(clone_step, label="git clone")
 
     print("  \u231b Configuring build (CUDA, sm_75 for T4)...")
-    sh(
-        f"cmake -B {LLAMA_SRC_DIR}/build -S {LLAMA_SRC_DIR} "
-        f"-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={CUDA_ARCH} "
-        f"-DCMAKE_BUILD_TYPE=Release "
-        f"-DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF"
-    )
+    driver_flags = cuda_driver_cmake_flags()
+
+    def configure(extra_flags):
+        sh(f"rm -rf {LLAMA_SRC_DIR}/build", check=False, quiet=True)
+        return sh(
+            f"cmake -B {LLAMA_SRC_DIR}/build -S {LLAMA_SRC_DIR} "
+            f"-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={CUDA_ARCH} "
+            f"-DCMAKE_BUILD_TYPE=Release "
+            f"-DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF "
+            + " ".join(extra_flags),
+            check=False,
+        ).returncode == 0
+
+    if not configure(driver_flags):
+        print("  \u26a0\ufe0f Configure failed with the CUDA driver library -- retrying with "
+              "GGML_CUDA_NO_VMM=ON.")
+        if not configure(driver_flags + ["-DGGML_CUDA_NO_VMM=ON"]):
+            raise RuntimeError("CMake configure failed even with CUDA VMM disabled -- see the build log above.")
 
     print("  \u231b Compiling llama-server...")
     sh(f"cmake --build {LLAMA_SRC_DIR}/build --config Release -j$(nproc) --target llama-server")

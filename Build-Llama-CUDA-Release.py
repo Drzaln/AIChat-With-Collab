@@ -80,6 +80,90 @@ def run_with_retry(fn, max_attempts=3, label="operation"):
             time.sleep(wait_s)
 
 
+def find_cuda_driver_lib():
+    """Locate a libcuda.so the linker can actually consume.
+
+    CMake's FindCUDAToolkit only creates the CUDA::cuda_driver imported target
+    if find_library(NAMES cuda) succeeds -- i.e. if a file literally named
+    'libcuda.so' exists in one of its search paths. Kaggle/Colab GPU images
+    ship the CUDA *toolkit* without the driver stub package
+    (cuda-driver-dev-*), and the real driver is injected by the NVIDIA
+    container runtime as a versioned 'libcuda.so.1' with no unversioned dev
+    symlink. So the target never gets created, and llama.cpp's
+    `target_link_libraries(ggml-cuda PRIVATE CUDA::cuda_driver)` blows up the
+    CMake *generate* step with "but the target was not found".
+
+    Returns (path, is_versioned); is_versioned=True means the caller must
+    create the missing 'libcuda.so' symlink pointing at it.
+    """
+    cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH") or "/usr/local/cuda"
+    dirs = []
+    for base in (cuda_home, "/usr/local/cuda"):
+        dirs += [
+            f"{base}/lib64/stubs",
+            f"{base}/lib/stubs",
+            f"{base}/targets/x86_64-linux/lib/stubs",
+            f"{base}/lib64",
+            f"{base}/targets/x86_64-linux/lib",
+        ]
+    dirs += ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"]
+
+    # Prefer an unversioned stub / dev symlink: linking against the toolkit
+    # stub is the standard way to build a portable CUDA binary, since it only
+    # records a DT_NEEDED on libcuda.so.1 and lets the host's real driver
+    # satisfy it at run time.
+    for d in dirs:
+        p = f"{d}/libcuda.so"
+        if os.path.exists(p):
+            return p, False
+
+    # Otherwise fall back to the runtime driver and symlink it ourselves. The
+    # SONAME baked into the binary is still libcuda.so.1, so the tarball stays
+    # exactly as portable as a stub-linked one -- we are not freezing this
+    # machine's driver version into the package.
+    versioned = []
+    for d in dirs:
+        if os.path.isfile(f"{d}/libcuda.so.1"):
+            versioned.append(f"{d}/libcuda.so.1")
+        versioned += sorted(glob.glob(f"{d}/libcuda.so.*"))
+    r = sh("ldconfig -p", check=False, capture=True)
+    if r.returncode == 0:
+        for line in r.stdout.splitlines():
+            if "libcuda.so" in line and "=>" in line:
+                versioned.append(line.split("=>")[-1].strip())
+    for p in versioned:
+        if os.path.isfile(p):
+            return p, True
+    return None, False
+
+
+def cuda_driver_cmake_flags():
+    """Extra -D flags that make CUDA::cuda_driver resolvable, or [] if no
+    driver library exists on this image at all."""
+    path, is_versioned = find_cuda_driver_lib()
+    if not path:
+        print("  \u26a0\ufe0f No libcuda.so / libcuda.so.1 found on this image -- "
+              "will need to build with CUDA VMM disabled.")
+        return []
+    if is_versioned:
+        link_dir = "/tmp/cuda-driver-link"
+        os.makedirs(link_dir, exist_ok=True)
+        link_path = f"{link_dir}/libcuda.so"
+        if os.path.lexists(link_path):
+            os.remove(link_path)
+        os.symlink(path, link_path)
+        print(f"  Driver lib: {path}")
+        print(f"  No unversioned 'libcuda.so' here -- symlinked one at {link_path}")
+    else:
+        link_path, link_dir = path, os.path.dirname(path)
+        print(f"  Driver lib: {path}")
+    # CMAKE_LIBRARY_PATH is what actually fixes find_library(NAMES cuda) -- it
+    # is searched ahead of FindCUDAToolkit's own HINTS. Seeding the cache
+    # variable as well short-circuits the search outright, so this holds up
+    # across CMake versions that name it differently.
+    return [f"-DCMAKE_LIBRARY_PATH={link_dir}", f"-DCUDA_cuda_driver_LIBRARY={link_path}"]
+
+
 print("\u2554" + "\u2550" * 64 + "\u2557")
 print("\u2551  Build-Llama-CUDA-Release \u00b7 one-time prebuilt packager" + " " * 7 + "\u2551")
 print("\u255a" + "\u2550" * 64 + "\u255d")
@@ -127,12 +211,39 @@ commit_hash = r.stdout.strip() if r.returncode == 0 else "unknown"
 print(f"  Commit: {commit_hash}")
 
 print("  \u231b Configuring (CUDA, Release)...")
-sh(
-    f"cmake -B {BUILD_DIR}/build -S {BUILD_DIR} "
-    f"-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={CUDA_ARCH} "
-    f"-DCMAKE_BUILD_TYPE=Release "
-    f"-DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF"
-)
+driver_flags = cuda_driver_cmake_flags()
+
+
+def configure(extra_flags):
+    # Wipe the build dir between attempts: a failed generate leaves a
+    # CMakeCache.txt behind with the NOTFOUND driver lookup cached in it.
+    sh(f"rm -rf {BUILD_DIR}/build", check=False, quiet=True)
+    return sh(
+        f"cmake -B {BUILD_DIR}/build -S {BUILD_DIR} "
+        f"-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={CUDA_ARCH} "
+        f"-DCMAKE_BUILD_TYPE=Release "
+        f"-DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF "
+        + " ".join(extra_flags),
+        check=False,
+    ).returncode == 0
+
+
+cuda_vmm = True
+if not configure(driver_flags):
+    # Last resort: ggml's own escape hatch. GGML_CUDA_NO_VMM=ON is precisely
+    # the switch that makes ggml-cuda skip its
+    # `target_link_libraries(ggml-cuda PRIVATE CUDA::cuda_driver)` line, so the
+    # build stops needing libcuda.so at link time. It costs the VMM-backed
+    # memory pool (a slightly less efficient allocator), which is a far better
+    # outcome than no binary at all -- and VERSION.txt records that it happened
+    # so the consumer notebooks aren't misled about what they downloaded.
+    print("  \u26a0\ufe0f Configure failed with the CUDA driver library -- retrying with "
+          "GGML_CUDA_NO_VMM=ON (skips the libcuda.so link requirement).")
+    cuda_vmm = False
+    if not configure(driver_flags + ["-DGGML_CUDA_NO_VMM=ON"]):
+        print("  \u274c CMake configure failed even with VMM disabled -- see the log above.")
+        sys.exit(1)
+print(f"  \u2705 Configured (CUDA VMM: {'on' if cuda_vmm else 'off'})")
 
 print("  \u231b Compiling llama-server (this is the slow part -- grab a coffee)...")
 t0 = time.time()
@@ -212,6 +323,7 @@ version_txt = (
     f"llama_cpp_tag={LLAMA_CPP_TAG}\n"
     f"commit={commit_hash}\n"
     f"cuda_arch=sm_{CUDA_ARCH}\n"
+    f"cuda_vmm={'on' if cuda_vmm else 'off'}\n"
     f"built_on_gpu={gpu_name}\n"
     f"nvcc={nvcc_version}\n"
     f"built_at={built_at}\n"
