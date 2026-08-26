@@ -118,6 +118,10 @@ Cloudflare Tunnel is used identically in both stacks — it just tunnels a local
 4. **Accessing the Application (Local):** Open your preferred web browser and navigate to `http://localhost:3000`.
 5. **Accessing the Application (Same WiFi Network):** This application can be accessed by any device (such as a smartphone or tablet) connected to the same WiFi network as the host computer. Simply enter the local IP address of the host computer followed by the server port into the device's browser (e.g., `http://192.168.1.15:3000`).
 
+## CHANGELOG
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
+
 ## LISENSI - LICENSE
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
