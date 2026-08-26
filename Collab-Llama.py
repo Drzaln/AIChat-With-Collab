@@ -67,8 +67,8 @@ CUDA_ARCH = "75"   # T4 = compute capability 7.5 (Turing)
 # OPTIONAL: URL of a prebuilt tarball produced by Build-Llama-CUDA-Release.py
 # (a GitHub Release asset URL you control). Leave empty to always build from
 # source. Example:
-#   GITHUB_RELEASE_URL = "https://github.com/<user>/<repo>/releases/download/llama-cuda-b10605/llama-cuda-sm75-b10605.tar.gz"
-GITHUB_RELEASE_URL = ""
+#   GITHUB_RELEASE_URL = "https://github.com/<user>/<repo>/releases/download/v1.0.0/llama-cuda-sm75-b10605.tar.gz"
+GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.0.0/llama-linux-cuda-sm75-b10605.tar.gz"
 
 NUM_CTX = 8192   # T4 (16GB) comfortably handles this with a 14B Q6_K model.
 

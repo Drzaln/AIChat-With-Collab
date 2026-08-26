@@ -56,7 +56,7 @@ CUDA_ARCH = "75"   # both Kaggle T4s = compute capability 7.5 (Turing)
 
 # OPTIONAL: URL of a prebuilt tarball from Build-Llama-CUDA-Release.py.
 # Leave empty to always build from source.
-GITHUB_RELEASE_URL = ""
+GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.0.0/llama-linux-cuda-sm75-b10605.tar.gz"
 
 NUM_CTX = 12288   # 2x T4 gives more VRAM headroom than single-GPU Colab.
 GPU_IDS = "0,1"   # do NOT set to just "0" -- the model needs both to fit.
