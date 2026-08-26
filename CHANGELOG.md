@@ -5,7 +5,7 @@ follows [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
-## [Unreleased] — llama.cpp migration + stability pass
+## [v1.0.0] — llama.cpp migration + stability pass
 
 ### Added
 - **`Collab-Llama.py`** — new one-click Colab notebook script. Runs `llama-server`
