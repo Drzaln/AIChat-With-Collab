@@ -15,7 +15,8 @@ let state = {
     config: {},
     characterSearchQuery: '',
     pinterest: { results: [], index: 0, loading: false },
-    unreadChats: new Set()
+    unreadChats: new Set(),
+    _chatNavToken: 0 // monotonic guard against out-of-order chat navigation (C14/15/16)
 };
 
 window.langData = {};
@@ -30,7 +31,11 @@ function getAvatarInnerHtml(avatar, name) {
     if (avatar && avatar.startsWith('data:')) {
         return `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(name || 'avatar')}">`;
     }
-    return avatar || (name ? name.charAt(0).toUpperCase() : 'A');
+    // Not a data: URI — normally just a single emoji/letter placeholder,
+    // but `avatar` can be set to an arbitrary string via the API directly
+    // (bypassing the upload/Pinterest flows that always produce a data:
+    // URI), so it must be escaped like every other injected value here.
+    return escapeHtml(avatar || (name ? name.charAt(0).toUpperCase() : 'A'));
 }
 
 function updateAvatarPreview(avatarData) {
@@ -110,10 +115,7 @@ async function api(method, url, body = null) {
 
 async function loadConfig() {
     state.config = await api('GET', '/api/config');
-    $('#cfg-base-url').value = state.config.baseUrl || '';
-    $('#cfg-api-key').value = state.config.apiKey || 'sk-colab-local';
-    $('#cfg-model').value = state.config.modelName || 'character1';
-    
+
     if (state.config.uiLang) {
         await loadLanguage(state.config.uiLang, state.config.showLangWarning);
     }
@@ -160,40 +162,17 @@ async function loadLanguage(langCode, showWarning) {
     }
 }
 
-async function saveConfig() {
-    const baseUrl = $('#cfg-base-url').value.trim();
-    const apiKey = $('#cfg-api-key').value.trim();
-    const modelName = $('#cfg-model').value;
-
-    await api('POST', '/api/config', { baseUrl, apiKey, modelName });
-    state.config = { ...state.config, baseUrl, apiKey, modelName };
-    toast(t('toast.settings_saved'), 'success');
-    closeModal('modal-settings');
-    testConnection();
-}
-
 async function testConnection() {
     const result = await api('GET', '/api/test-connection');
     const statusDot = $('.status-dot');
     const statusText = $('.status-text');
-    const resultEl = $('#connection-result');
 
     if (result.ok) {
         statusDot.className = 'status-dot online';
         statusText.textContent = t('sidebar.connected') || 'Connected to Colab';
-        if (resultEl) {
-            resultEl.style.display = 'block';
-            resultEl.className = 'connection-result success';
-            resultEl.textContent = '✅ Connection successful! Server is healthy.';
-        }
     } else {
         statusDot.className = 'status-dot offline';
         statusText.textContent = result.error || t('sidebar.disconnected') || 'Disconnected';
-        if (resultEl) {
-            resultEl.style.display = 'block';
-            resultEl.className = 'connection-result error';
-            resultEl.textContent = `❌ ${result.error || 'Connection failed'}`;
-        }
     }
 }
 
@@ -268,7 +247,12 @@ async function selectCharacter(id) {
     renderCharacterList();
 
     // Load chats for this character
-    state.chats = await api('GET', `/api/chats/${id}`);
+    const chats = await api('GET', `/api/chats/${id}`);
+    // The user may have already clicked a different character while this
+    // GET was in flight — don't let a slower, stale response overwrite
+    // whatever character they've since switched to.
+    if (state.currentCharacterId !== id) return;
+    state.chats = chats;
     renderChatList();
 
     const char = state.characters.find(c => c.id === id);
@@ -285,6 +269,8 @@ async function selectCharacter(id) {
         // Start a new chat automatically
         await startNewChat();
     }
+
+    if (state.currentCharacterId !== id) return; // switched away during loadChat/startNewChat
 
     // Switch to chat view
     showView('view-chat');
@@ -402,6 +388,9 @@ function renderChatList() {
 async function startNewChat() {
     if (!state.currentCharacterId) return;
 
+    const myToken = ++state._chatNavToken;
+    const characterIdAtStart = state.currentCharacterId;
+
     const char = state.characters.find(c => c.id === state.currentCharacterId);
     const initialMessages = [];
 
@@ -415,15 +404,18 @@ async function startNewChat() {
     }
 
     const chat = await api('POST', '/api/chats', {
-        characterId: state.currentCharacterId,
+        characterId: characterIdAtStart,
         title: 'New Chat',
         messages: initialMessages
     });
 
-    state.currentChatId = chat.id;
+    // Reload chat list for whichever character this was created for
+    const chats = await api('GET', `/api/chats/${characterIdAtStart}`);
 
-    // Reload chat list
-    state.chats = await api('GET', `/api/chats/${state.currentCharacterId}`);
+    if (myToken !== state._chatNavToken) return; // superseded by a newer navigation
+
+    state.currentChatId = chat.id;
+    state.chats = chats;
     renderChatList();
     renderMessages(chat.messages || []);
     showView('view-chat');
@@ -431,8 +423,15 @@ async function startNewChat() {
 }
 
 async function loadChat(chatId) {
+    // A monotonic token shared with startNewChat/deleteChat: whichever
+    // call is the most recent one wins, regardless of which of several
+    // in-flight requests happens to resolve last (classic out-of-order
+    // resolution when a user clicks between chats quickly).
+    const myToken = ++state._chatNavToken;
+
     const chat = await api('GET', `/api/chat/${chatId}`);
     if (!chat || chat.error) return;
+    if (myToken !== state._chatNavToken) return; // superseded by a newer navigation
 
     state.currentChatId = chatId;
     state.unreadChats.delete(chatId);
@@ -443,19 +442,33 @@ async function loadChat(chatId) {
 
 async function deleteChat(chatId) {
     if (!confirm(t('app.confirm_delete_chat'))) return;
-    await api('DELETE', `/api/chat/${chatId}`);
 
-    if (state.currentChatId === chatId) {
-        state.currentChatId = null;
-    }
+    // Guard against double-clicking the delete button firing two
+    // overlapping DELETE requests for the same chat.
+    state._deletingChats = state._deletingChats || new Set();
+    if (state._deletingChats.has(chatId)) return;
+    state._deletingChats.add(chatId);
 
-    state.chats = await api('GET', `/api/chats/${state.currentCharacterId}`);
-    renderChatList();
+    const myToken = ++state._chatNavToken;
 
-    if (state.chats.length > 0) {
-        await loadChat(state.chats[0].id);
-    } else {
-        await startNewChat();
+    try {
+        await api('DELETE', `/api/chat/${chatId}`);
+
+        if (state.currentChatId === chatId) {
+            state.currentChatId = null;
+        }
+
+        state.chats = await api('GET', `/api/chats/${state.currentCharacterId}`);
+        if (myToken !== state._chatNavToken) return; // a newer navigation took over meanwhile
+        renderChatList();
+
+        if (state.chats.length > 0) {
+            await loadChat(state.chats[0].id);
+        } else {
+            await startNewChat();
+        }
+    } finally {
+        state._deletingChats.delete(chatId);
     }
 }
 
@@ -708,9 +721,16 @@ window.changeAlternate = async function (msgIndex, delta) {
     if (state._alternateNavBusy.has(msgIndex)) return; // ignore rapid double-clicks mid-request
     state._alternateNavBusy.add(msgIndex);
 
+    const requestChatId = state.currentChatId; // capture before the await
+
     try {
-        const chat = await api('GET', `/api/chat/${state.currentChatId}`);
+        const chat = await api('GET', `/api/chat/${requestChatId}`);
         if (!chat || chat.error) return;
+        // The user may have switched to a different chat while this GET was
+        // in flight — don't render a stale chat's messages into (or write
+        // this alternate-selection onto) whatever chat is showing now.
+        if (state.currentChatId !== requestChatId) return;
+
         const msg = chat.messages[msgIndex];
         if (!msg || !msg.alternates) return;
 
@@ -724,7 +744,7 @@ window.changeAlternate = async function (msgIndex, delta) {
         // Optimistic re-render
         renderMessages(chat.messages);
 
-        await api('PUT', `/api/chat/${state.currentChatId}/alternate`, {
+        await api('PUT', `/api/chat/${requestChatId}/alternate`, {
             messageIndex: msgIndex,
             selectedAlternate: sel
         });
@@ -734,8 +754,13 @@ window.changeAlternate = async function (msgIndex, delta) {
 };
 
 window.editMessage = async function (index) {
-    const chat = await api('GET', `/api/chat/${state.currentChatId}`);
+    const requestChatId = state.currentChatId; // capture before the await
+    const chat = await api('GET', `/api/chat/${requestChatId}`);
     if (!chat || chat.error) return;
+    // Bail out if the user navigated to a different chat while this GET
+    // was in flight — the fetched message/index belongs to requestChatId,
+    // not to whatever chat is now showing.
+    if (state.currentChatId !== requestChatId) return;
     const msg = chat.messages[index];
     if (!msg) return;
 
@@ -801,12 +826,13 @@ window.saveEdit = async function (index) {
     const newContent = textarea.value.trim();
     if (!newContent) return cancelEdit(index);
 
+    const requestChatId = state.currentChatId; // capture before any await
     const btn = textarea.nextElementSibling.querySelector('.btn-primary');
     btn.disabled = true;
     btn.textContent = t('btn.saving');
 
     try {
-        const result = await api('PUT', `/api/chat/${state.currentChatId}/message`, {
+        const result = await api('PUT', `/api/chat/${requestChatId}/message`, {
             messageIndex: index,
             content: newContent
         });
@@ -818,7 +844,14 @@ window.saveEdit = async function (index) {
             return;
         }
 
-        await loadChat(state.currentChatId);
+        // Only refresh the rendered messages if the user is still on the
+        // chat that was just edited. If they navigated away meanwhile,
+        // the edit already persisted server-side — nothing more to do
+        // here, and calling loadChat now would wrongly re-render whatever
+        // *different* chat happens to be current.
+        if (state.currentChatId === requestChatId) {
+            await loadChat(requestChatId);
+        }
     } catch (err) {
         toast(`Error: ${err.message}`, 'error');
         btn.disabled = false;
@@ -833,10 +866,16 @@ window.saveEdit = async function (index) {
 async function openMemoryViewer() {
     if (!state.currentCharacterId) return;
 
+    const requestCharacterId = state.currentCharacterId; // capture before the await
     const char = state.characters.find(c => c.id === state.currentCharacterId);
     $('#memory-char-name').textContent = char ? char.name : 'Character';
 
-    state.memory = await api('GET', `/api/memory/${state.currentCharacterId}`);
+    const memory = await api('GET', `/api/memory/${requestCharacterId}`);
+    // Bail out if the user switched characters while this GET was in
+    // flight — don't open the memory modal with the WRONG character's data.
+    if (state.currentCharacterId !== requestCharacterId) return;
+
+    state.memory = memory;
     renderMemory();
     openModal('modal-memory');
     closeSidebarOnMobile();
@@ -862,7 +901,7 @@ function renderMemory() {
         <div class="memory-item">
             <span class="memory-item-key">${escapeHtml(k)}</span>
             <span class="memory-item-text">${escapeHtml(v)}</span>
-            <button class="memory-item-delete" onclick="removeMemoryPref('${escapeHtml(k)}')">✕</button>
+            <button class="memory-item-delete" onclick="removeMemoryPref(${escapeHtml(JSON.stringify(k))})">✕</button>
         </div>
     `).join('') || `<div style="color:var(--text-muted); font-size:0.8rem; padding:8px">${t('memory.empty_user')}</div>`;
 
@@ -870,7 +909,7 @@ function renderMemory() {
     const eventsEl = $('#memory-events');
     eventsEl.innerHTML = (mem.importantEvents || []).map((e, i) => `
         <div class="memory-item">
-            <span class="memory-item-key">${e.date || ''}</span>
+            <span class="memory-item-key">${escapeHtml(e.date || '')}</span>
             <span class="memory-item-text">${escapeHtml(e.description)}</span>
             <button class="memory-item-delete" onclick="removeMemoryItem('importantEvents', ${i})">✕</button>
         </div>
@@ -936,7 +975,9 @@ function addMemoryEvent() {
 
 async function saveMemory() {
     if (!state.currentCharacterId || !state.memory) return;
-    await api('PUT', `/api/memory/${state.currentCharacterId}`, state.memory);
+    const requestCharacterId = state.currentCharacterId; // capture before the await
+    await api('PUT', `/api/memory/${requestCharacterId}`, state.memory);
+    if (state.currentCharacterId !== requestCharacterId) return;
     toast(t('toast.memory_saved'), 'success');
     closeModal('modal-memory');
 }
@@ -947,14 +988,22 @@ async function summarizeMemory() {
         return;
     }
 
+    const requestCharacterId = state.currentCharacterId; // capture before the (5-120s) await
     const btn = $('#btn-summarize-memory');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> ' + t('btn.saving');
 
     try {
-        const result = await api('POST', `/api/memory/${state.currentCharacterId}/summarize`, {
+        const result = await api('POST', `/api/memory/${requestCharacterId}/summarize`, {
             chatId: state.currentChatId
         });
+
+        // The LLM call above can take anywhere from 5 to 120 seconds. If
+        // the user switched to a different character while waiting, DO
+        // NOT overwrite state.memory / re-render — that would show (and
+        // let the user unknowingly Save) the WRONG character's memory
+        // on top of whatever character is now actually being viewed.
+        if (state.currentCharacterId !== requestCharacterId) return;
 
         if (result.error) {
             toast(result.error, 'error');
@@ -968,8 +1017,13 @@ async function summarizeMemory() {
             }
         }
     } catch (err) {
-        toast(`Error: ${err.message}`, 'error');
+        if (state.currentCharacterId === requestCharacterId) {
+            toast(`Error: ${err.message}`, 'error');
+        }
     } finally {
+        // Always safe to reset regardless of which character is active —
+        // #btn-summarize-memory is a single fixed element in the shared
+        // memory modal, not per-character.
         btn.disabled = false;
         btn.innerHTML = t('memory.btn_ai_summary') || '🤖 AI Summarize Chat';
     }
@@ -1056,25 +1110,10 @@ function autoResizeInput() {
 // ══════════════════════════════════════════════════════════
 
 function bindEvents() {
-    // Settings
+    // Settings — dedicated page (Configuration, Appearance, Notifications,
+    // Data & backup all live there now), not a popup.
     $('#btn-settings').addEventListener('click', () => {
-        openModal('modal-settings');
-        closeSidebarOnMobile();
-    });
-    $('#btn-save-settings').addEventListener('click', saveConfig);
-    $('#btn-test-connection').addEventListener('click', async () => {
-        const btn = $('#btn-test-connection');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Testing...';
-        // First save config so the test uses the latest values
-        const baseUrl = $('#cfg-base-url').value.trim();
-        const apiKey = $('#cfg-api-key').value.trim();
-        const modelName = $('#cfg-model').value;
-        await api('POST', '/api/config', { baseUrl, apiKey, modelName });
-        state.config = { ...state.config, baseUrl, apiKey, modelName };
-        await testConnection();
-        btn.disabled = false;
-        btn.innerHTML = t('settings.btn_test') || '🔌 Test Connection';
+        window.location.href = 'settings.html';
     });
 
     // Character
@@ -1424,8 +1463,16 @@ window.saveRenameChat = async function(chatId) {
     const newTitle = input.value.trim();
     if (!newTitle) return cancelRenameChat();
 
+    const requestCharacterId = state.currentCharacterId; // capture before the await
+
     try {
         await api('PUT', `/api/chat/${chatId}`, { title: newTitle });
+
+        // If the user switched characters while this PUT was in flight,
+        // state.chats now belongs to a different character and won't
+        // contain this chat — the rename still succeeded server-side,
+        // but there's nothing to update in the currently-visible list.
+        if (state.currentCharacterId !== requestCharacterId) return;
 
         const chat = state.chats.find(c => c.id === chatId);
         if (chat) chat.title = newTitle;
@@ -1434,7 +1481,7 @@ window.saveRenameChat = async function(chatId) {
         toast('Chat renamed!', 'success');
     } catch (err) {
         toast(`Error: ${err.message}`, 'error');
-        renderChatList();
+        if (state.currentCharacterId === requestCharacterId) renderChatList();
     }
 };
 

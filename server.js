@@ -657,7 +657,12 @@ Keep responses concise — 1-3 paragraphs max unless the user asks for more deta
         writeJSON(chatFp, freshChat);
 
         // ── Auto-extract memory after every exchange ──
-        autoExtractMemory(memFp, userMessage, assistantContent, memory);
+        // Note: intentionally NOT passing the `memory` object loaded at the
+        // top of this handler — it was read before the 5-120s LLM call, so
+        // by now it may be stale (see autoExtractMemory's own fresh re-read,
+        // C6). The function reads its own up-to-date copy right before it
+        // decides what to write.
+        autoExtractMemory(memFp, userMessage, assistantContent);
 
         res.json({
             content: assistantContent,
@@ -855,8 +860,21 @@ app.put('/api/chat/:chatId/message', (req, res) => {
 /**
  * Auto-extract memory from conversations using keyword heuristics.
  * This runs after every exchange to pick up important facts.
+ *
+ * IMPORTANT (C6): this is called after the 5-120s LLM call in
+ * /api/chat/send has already completed. If it operated on the `memory`
+ * object read at the *start* of that request, any manual edit the user
+ * made via PUT /api/memory/:characterId while the LLM was still thinking
+ * would already be sitting on disk — and this function would silently
+ * overwrite it with the stale pre-wait snapshot plus its own additions.
+ * So, like the chat-history save a few lines above this call, memory is
+ * re-read fresh from disk right here, immediately before deciding what
+ * (if anything) needs to be written — never passed in from the caller.
  */
-function autoExtractMemory(fp, userMsg, assistantMsg, memory) {
+function autoExtractMemory(fp, userMsg, assistantMsg) {
+    const memory = readJSON(fp, {
+        facts: [], summaries: [], importantEvents: [], userPreferences: {}
+    });
     let changed = false;
     const lower = userMsg.toLowerCase();
 

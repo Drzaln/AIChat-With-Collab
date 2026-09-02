@@ -9,9 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <script src="/theme.js"></script>
 </head>
 
 <body>
@@ -23,13 +24,15 @@
                     <span class="logo-icon">✦</span>
                     <span class="logo-text">AI Chat</span>
                 </div>
-                <button class="btn-icon" id="btn-settings" title="Settings">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                        <circle cx="12" cy="12" r="3" />
-                    </svg>
-                </button>
+                <div class="sidebar-header-actions">
+                    <button class="btn-icon" id="btn-settings" title="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <button class="btn-new-character" id="btn-new-character">
@@ -190,48 +193,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- ═══ MODAL: Settings ═══ -->
-    <div class="modal-overlay" id="modal-settings">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 data-i18n="settings.title">⚙️ Settings</h2>
-                <button class="btn-icon modal-close" onclick="closeModal('modal-settings')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="cfg-base-url" data-i18n="settings.colab_url">🌐 Colab Base URL</label>
-                    <input type="url" id="cfg-base-url" placeholder="https://xxxx.trycloudflare.com" data-i18n-placeholder="settings.colab_url_placeholder" class="form-input">
-                    <span class="form-hint" data-i18n="settings.colab_url_hint">URL Cloudflare dari output Google Colab notebook</span>
-                </div>
-                <div class="form-group">
-                    <label for="cfg-api-key" data-i18n="settings.api_key">🔑 API Key</label>
-                    <input type="text" id="cfg-api-key" placeholder="sk-colab-local" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="cfg-model" data-i18n="settings.model_name">🤖 Model Name</label>
-                    <select id="cfg-model" class="form-input">
-                        <option value="character1">character1 (default)</option>
-                        <option value="hf.co/mradermacher/Hermes-4-14B-BF16-abliterated-i1-GGUF:IQ4_XS">
-                            Hermes-4-14B-BF16-abliterated</option>
-                        <!--<option value="claude-haiku-4-5">claude-haiku-4-5</option>
-                        <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>-->
-                    </select>
-                    <span class="form-hint" data-i18n="settings.model_name_hint">Nama model sesuai mapping di LiteLLM (semua akan diarahkan ke model Ollama di Colab)</span>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-secondary" id="btn-test-connection" data-i18n="settings.btn_test">🔌 Test Connection</button>
-                    <button class="btn-primary" id="btn-save-settings" data-i18n="settings.btn_save">💾 Simpan</button>
-                </div>
-                <div id="connection-result" class="connection-result" style="display:none"></div>
-            </div>
-        </div>
     </div>
 
     <!-- ═══ MODAL: Character Editor ═══ -->

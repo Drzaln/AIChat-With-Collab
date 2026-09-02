@@ -1,0 +1,393 @@
+/* ═══════════════════════════════════════════════════════════
+   Settings — dedicated page (not a modal)
+   Tabs: Configuration · Appearance · Notifications · Data & backup
+   Reuses variables, fonts and .btn-*/.form-* classes from
+   styles.css; only page-specific layout lives here.
+   ═══════════════════════════════════════════════════════════ */
+
+/* (C21 v3 — real scroll fix, take 3) The previous attempt (overriding
+   html/body's overflow with a higher-specificity class selector) was
+   verified correct in isolation but still failed to scroll on a real
+   device — rather than keep guessing at why that override didn't take
+   effect (cascade edge case, or a stale cached stylesheet — either way,
+   not worth re-litigating), this uses a technique that can't be defeated
+   by any of that: #settings-scroll-root is `position: fixed; inset: 0`,
+   which makes it establish its own box tied to the viewport, with its
+   own independent overflow, regardless of whatever html/body are doing.
+   It does not matter if html/body remain `overflow: hidden` — a
+   fixed-position descendant scrolls on its own regardless. */
+html.settings-page,
+body.settings-page {
+    height: auto !important;
+    overflow: hidden !important; /* nothing renders directly in body other than the fixed root anyway */
+}
+
+#settings-scroll-root {
+    position: fixed;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+}
+
+.settings-shell {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 20px 20px 60px;
+}
+
+.settings-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.settings-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.settings-back:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+}
+
+.settings-title {
+    font-size: 19px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 22px;
+    align-items: start;
+}
+
+/* ── Nav: ONE bordered menu card containing plain rows — not a row of
+   separate floating pills. This matches how a settings sidebar/menu is
+   normally built: the container is the menu itself, and each option is
+   just a list item inside it, highlighted on hover/active by background
+   only. Sidebar on desktop, horizontal scrollable strip on mobile. ── */
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 20px;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+
+.settings-nav-item.active {
+    background: var(--accent-primary-glow);
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.settings-nav-item:not(.active):hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.settings-nav-item[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+    .settings-shell { padding: 16px 14px 48px; }
+
+    .settings-layout {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .settings-nav {
+        position: static;
+        flex-direction: row;
+        gap: 2px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .settings-nav::-webkit-scrollbar { display: none; }
+
+    .settings-nav-item {
+        width: auto;
+        flex-shrink: 0;
+    }
+}
+
+.settings-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-md);
+    min-width: 0; /* let long content shrink instead of forcing the grid wider */
+}
+
+.settings-panel[hidden] { display: none; }
+
+.settings-panel h2 {
+    font-size: 16.5px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.settings-panel > p.settings-desc {
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    margin-bottom: 20px;
+    max-width: 56ch;
+}
+
+.settings-stub {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 26px 4px;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+}
+
+.settings-stub .stub-icon { font-size: 26px; margin-bottom: 4px; }
+
+/* ── Appearance tab ── */
+.picker-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.picker-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    min-width: 0;
+}
+
+.picker-card label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.picker-card .picker-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text-primary);
+}
+
+.picker-card input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.picker-card input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; }
+.picker-card input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+.picker-card input[type="color"]::-moz-color-swatch { border: none; border-radius: 50%; }
+
+.presets-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.presets-row span.presets-label {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-right: 4px;
+}
+
+.preset-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.preset-swatch:hover { transform: scale(1.12); }
+.preset-swatch:focus-visible { border-color: var(--text-primary); }
+
+.settings-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.save-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border-color);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.save-indicator.show { opacity: 1; transform: translateY(0); }
+
+.save-indicator .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.preview-label {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.preview-box {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    background: var(--bg-primary);
+}
+
+.preview-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.preview-bubble {
+    max-width: 82%;
+    padding: 11px 15px;
+    line-height: 1.55;
+    word-break: break-word;
+    position: relative;
+}
+
+.preview-bubble.assistant {
+    align-self: flex-start;
+    font-family: var(--font-prose);
+    font-size: 14.5px;
+    background: var(--bubble-assistant);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-inline-start: 2px solid var(--accent-primary);
+    border-start-start-radius: 3px;
+    border-end-start-radius: 3px;
+    border-start-end-radius: var(--radius-lg);
+    border-end-end-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.preview-bubble.user {
+    align-self: flex-end;
+    font-size: 13.5px;
+    background: var(--bubble-user);
+    color: var(--text-on-accent);
+    border: 1px solid var(--accent-deep);
+    border-start-start-radius: var(--radius-lg);
+    border-end-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+    border-end-end-radius: 4px;
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.preview-controls .btn-primary,
+.preview-controls .btn-secondary {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.preview-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--accent-primary-glow);
+    color: var(--text-accent);
+    border: 1px solid var(--border-accent);
+}
+
+/* ── Configuration tab ── */
+#settings-connection-result {
+    margin-top: 14px;
+}
