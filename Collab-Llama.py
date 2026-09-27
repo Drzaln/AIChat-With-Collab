@@ -84,7 +84,7 @@ _FALLBACK_ARCH_IF_UNDETECTABLE = "75"   # last resort if nvidia-smi query fails
 # notebooks might attach to, so you never need to change it when you switch
 # GPU type in Colab. Example:
 #   GITHUB_RELEASE_URL = "https://github.com/<user>/<repo>/releases/download/v1.0.0/llama-cuda-multiarch-b10605.tar.gz"
-GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.0.0/llama-cuda-multiarch-b10605.tar.gz"
+GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.3.1/llama-cuda-multiarch-b10605.tar.gz"
 # NOTE: rebuild + re-upload with Build-Llama-CUDA-Release.py's new
 # multi-arch CUDA_ARCH first -- the old single-arch (sm75) tarball at the
 # previous URL won't satisfy the arch-coverage check below on non-T4 GPUs.

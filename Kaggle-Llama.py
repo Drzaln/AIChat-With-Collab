@@ -71,7 +71,7 @@ _FALLBACK_ARCH_IF_UNDETECTABLE = "75"   # last resort if nvidia-smi query fails
 # Leave empty to always build from source. This is a FAT multi-arch build --
 # the same URL as Collab-Llama.py's works here too, one release covers
 # every GPU type across both notebooks.
-GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.0.0/llama-cuda-multiarch-b10605.tar.gz"
+GITHUB_RELEASE_URL = "https://github.com/KiyoEditz/AIChat-With-Notebooks/releases/download/v1.3.1/llama-cuda-multiarch-b10605.tar.gz"
 # NOTE: rebuild + re-upload with Build-Llama-CUDA-Release.py's new
 # multi-arch CUDA_ARCH first -- the old single-arch (sm75) tarball won't
 # satisfy the arch-coverage check below if Kaggle ever offers non-T4 GPUs.
